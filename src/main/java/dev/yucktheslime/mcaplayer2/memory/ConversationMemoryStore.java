@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Per-villager conversation log persisted as JSON in the world save:
- * {@code <world>/data/mca_player2_bridge/villagers/<villager-uuid>.json}.
+ * {@code <world>/data/mcaplayer2/villagers/<villager-uuid>.json}.
  *
  * <p>Both sides read it: the companion gets the recent lines injected as context when it meets the
  * villager, and the villager reply generator uses them in the villager's prompt. Companions are

@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = PlayerEngineCommands.class, remap = false)
 public abstract class PlayerEngineCommandsMixin {
     @Inject(method = "init", at = @At("TAIL"), require = 0)
-    private static void mcap2b$registerCommands(PlayerEngineController controller, CallbackInfo ci) {
+    private static void mcaplayer2$registerCommands(PlayerEngineController controller, CallbackInfo ci) {
         try {
             controller.getCommandExecutor().registerNewCommand(new TalkToVillagerCommand(), new NearbyVillagersCommand());
         } catch (Throwable t) {

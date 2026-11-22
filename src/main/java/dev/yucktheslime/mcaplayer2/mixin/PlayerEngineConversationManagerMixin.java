@@ -21,7 +21,7 @@ import java.util.UUID;
 @Mixin(value = ConversationManager.class, remap = false)
 public abstract class PlayerEngineConversationManagerMixin {
     @Inject(method = "onAICharacterMessage", at = @At("HEAD"), require = 0)
-    private static void mcap2b$onCompanionMessage(Event.CharacterMessage msg, UUID senderId, CallbackInfo ci) {
+    private static void mcaplayer2$onCompanionMessage(Event.CharacterMessage msg, UUID senderId, CallbackInfo ci) {
         try {
             if (msg != null && msg.sendingCharacterData() != null) {
                 ConversationBridge.get().onCompanionSpoke(msg.sendingCharacterData(), msg.message());

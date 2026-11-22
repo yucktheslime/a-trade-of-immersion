@@ -13,7 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Simple JSON config stored at {@code config/mca_player2_bridge.json}. Missing keys fall back to
+ * Simple JSON config stored at {@code config/mcaplayer2.json}. Missing keys fall back to
  * the defaults below, and the file is re-written on load so new keys show up for the user.
  */
 public final class BridgeConfig {
