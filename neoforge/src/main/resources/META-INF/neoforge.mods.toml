@@ -1,0 +1,58 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "LGPL-3.0-or-later"
+issueTrackerURL = "https://github.com/yucktheslime/mca-player2-bridge/issues"
+
+[[mods]]
+modId = "mcaplayer2"
+version = "${version}"
+displayName = "MCA-Player2 Bridge"
+authors = "yucktheslime"
+description = '''
+Lets Player2 AI companions (PlayerEngine) and MCA Reborn villagers talk to each other, with per-villager conversation memory.
+'''
+
+[[mixins]]
+config = "mcaplayer2.mixins.json"
+
+[[dependencies.mcaplayer2]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.mcaplayer2]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.mcaplayer2]]
+modId = "architectury"
+type = "required"
+versionRange = "[13.0.8,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.mcaplayer2]]
+modId = "playerengine"
+type = "required"
+versionRange = "[1.21.1-1.4.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.mcaplayer2]]
+modId = "mca"
+type = "required"
+versionRange = "[7.7,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.mcaplayer2]]
+modId = "player2npc"
+type = "optional"
+versionRange = "[1.21.1-1.4.0,)"
+ordering = "NONE"
+side = "BOTH"

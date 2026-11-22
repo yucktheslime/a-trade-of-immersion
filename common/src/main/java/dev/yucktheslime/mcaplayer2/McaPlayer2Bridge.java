@@ -7,15 +7,15 @@ import dev.yucktheslime.mcaplayer2.context.PromptContextProvider;
 import dev.yucktheslime.mcaplayer2.goal.TalkToMcaVillagerGoal;
 import dev.yucktheslime.mcaplayer2.memory.ConversationMemoryStore;
 import dev.yucktheslime.mcaplayer2.util.McaVillagerUtil;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import dev.architectury.event.events.common.LifecycleEvent;
+import dev.architectury.event.events.common.TickEvent;
 import net.minecraft.world.entity.LivingEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Fabric entry point.
+ * Loader-agnostic entry point; called from {@code neoforge.McaPlayer2BridgeNeoForge} and
+ * {@code fabric.McaPlayer2BridgeFabric}. Events go through Architectury API so they work on both loaders.
  *
  * <ul>
  *   <li>PlayerEngine side: {@code mixin.PlayerEngineCommandsMixin} registers the LLM-callable
@@ -26,27 +26,29 @@ import org.slf4j.LoggerFactory;
  *   <li>Memory: {@link ConversationMemoryStore} keeps a JSON log per villager in the world save.</li>
  * </ul>
  */
-public class McaPlayer2Bridge implements ModInitializer {
+public final class McaPlayer2Bridge {
     public static final String MOD_ID = "mcaplayer2";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    @Override
-    public void onInitialize() {
+    private McaPlayer2Bridge() {
+    }
+
+    public static void init() {
         BridgeConfig.load();
         PromptContextProvider.register(OwnedCompanionContextProvider.INSTANCE);
         LOGGER.info("MCA-Player2 Bridge initializing (enabled={})", BridgeConfig.get().enabled);
 
-        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+        LifecycleEvent.SERVER_STARTED.register(server -> {
             ConversationMemoryStore.get().open(server);
             ConversationBridge.get().reset();
         });
-        ServerLifecycleEvents.BEFORE_SAVE.register((server, flush, force) -> ConversationMemoryStore.get().saveDirty());
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+        LifecycleEvent.SERVER_LEVEL_SAVE.register(level -> ConversationMemoryStore.get().saveDirty());
+        LifecycleEvent.SERVER_STOPPING.register(server -> {
             ConversationMemoryStore.get().saveDirty();
             ConversationMemoryStore.get().close();
             ConversationBridge.get().reset();
         });
-        ServerTickEvents.END_SERVER_TICK.register(server -> ConversationBridge.get().onServerTick(server));
+        TickEvent.SERVER_POST.register(server -> ConversationBridge.get().onServerTick(server));
     }
 
     /**

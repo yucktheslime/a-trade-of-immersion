@@ -27,9 +27,23 @@ jobs:
       - name: Build
         run: ./gradlew build --stacktrace
 
-      - name: Upload jars
+      # Only the remapped, runnable jars (not -dev-shadow / -sources).
+      - name: Upload NeoForge jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: mca-player2-bridge-neoforge-1.21.1
+          path: |
+            neoforge/build/libs/*.jar
+            !neoforge/build/libs/*-dev-shadow.jar
+            !neoforge/build/libs/*-sources.jar
+          if-no-files-found: error
+
+      - name: Upload Fabric jar
         uses: actions/upload-artifact@v4
         with:
           name: mca-player2-bridge-fabric-1.21.1
-          path: build/libs/*.jar
+          path: |
+            fabric/build/libs/*.jar
+            !fabric/build/libs/*-dev-shadow.jar
+            !fabric/build/libs/*-sources.jar
           if-no-files-found: error

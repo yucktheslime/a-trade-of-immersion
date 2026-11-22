@@ -1,6 +1,6 @@
 # MCA-Player2 Bridge
 
-A Fabric compatibility mod for **Minecraft 1.21.1** that lets **Player2 AI companions** (Player2NPC / PlayerEngine) detect, approach, and talk with **Minecraft Comes Alive (MCA) Reborn** villagers. Villagers talk back, and both sides remember past conversations.
+A **NeoForge** (primary) and Fabric compatibility mod for **Minecraft 1.21.1** that lets **Player2 AI companions** (Player2NPC / PlayerEngine) detect, approach, and talk with **Minecraft Comes Alive (MCA) Reborn** villagers. Villagers talk back, and both sides remember past conversations.
 
 > Status: **early alpha (0.1.0)**. It compiles against the real dependency jars (local build + CI), but it has **not been play-tested in game yet**. See [Known limitations](#known-limitations).
 
@@ -27,27 +27,43 @@ This bridge connects the two in both directions.
 ## Requirements
 
 1. **The Player2 desktop app must be installed, running, and signed in** on the machine running Minecraft (https://player2.game). Player2NPC/PlayerEngine use it for the companion's LLM and TTS. This bridge also calls its local API (`http://127.0.0.1:4315/v1/chat/completions`) to write villager replies.
-2. Mods (Fabric, 1.21.1). These are the exact versions the bridge is built against:
+2. Mods for **NeoForge 1.21.1**. These are the exact versions the bridge is built against:
 
 | Mod | Version | Link |
 |---|---|---|
-| Fabric Loader | 0.17.2 or newer (use the latest) | https://fabricmc.net/use/ |
+| NeoForge | 21.1.267 or newer 21.1.x | https://neoforged.net/ |
+| Architectury API (NeoForge) | 13.0.8 or newer | https://modrinth.com/mod/architectury-api |
+| PlayerEngine (NeoForge) | 1.21.1-1.4.0-NeoForge | https://modrinth.com/mod/playerengine/version/9cN9nlTk |
+| Player2NPC (NeoForge) | 1.21.1-1.4.0-NeoForge | https://modrinth.com/mod/player2npc/version/6hUQg8ap |
+| MCA Reborn (NeoForge) | 7.7.36+1.21.1 | https://modrinth.com/mod/minecraft-comes-alive-reborn/version/S2Ln2tIn |
+| MCA-Player2 Bridge | `mca-player2-bridge-neoforge-<version>.jar` | GitHub Actions artifact `mca-player2-bridge-neoforge-1.21.1` / `neoforge/build/libs` |
+
+<details><summary>Fabric (secondary build)</summary>
+
+| Mod | Version | Link |
+|---|---|---|
+| Fabric Loader | 0.17.2 or newer (latest recommended) | https://fabricmc.net/use/ |
 | Fabric API | 0.116.18+1.21.1 | https://modrinth.com/mod/fabric-api |
-| Architectury API | 13.0.8 or newer (required by PlayerEngine) | https://modrinth.com/mod/architectury-api |
-| PlayerEngine | 1.21.1-1.4.0 (Fabric) | https://modrinth.com/mod/playerengine |
-| Player2NPC | 1.21.1-1.4.0 (Fabric) | https://modrinth.com/mod/player2npc |
-| MCA Reborn | 7.7.36+1.21.1 (Fabric) | https://modrinth.com/mod/minecraft-comes-alive-reborn |
-| MCA-Player2 Bridge | this mod | GitHub Actions artifact / `build/libs` |
+| Architectury API (Fabric) | 13.0.8 or newer | https://modrinth.com/mod/architectury-api |
+| PlayerEngine (Fabric) | 1.21.1-1.4.0-Fabric | https://modrinth.com/mod/playerengine/version/msqQbeg3 |
+| Player2NPC (Fabric) | 1.21.1-1.4.0-Fabric | https://modrinth.com/mod/player2npc/version/QcQZkwnO |
+| MCA Reborn (Fabric) | 7.7.36+1.21.1 | https://modrinth.com/mod/minecraft-comes-alive-reborn/version/eUYBilCG |
+| MCA-Player2 Bridge | `mca-player2-bridge-fabric-<version>.jar` | artifact `mca-player2-bridge-fabric-1.21.1` |
 
-## Setup
+</details>
 
-1. Install the Fabric loader for 1.21.1 and drop all of the mods above into `mods/`.
-2. Start the Player2 app and sign in.
-3. Launch the game, spawn a Player2NPC companion, and walk into an MCA village.
-4. Try either of these:
+## Setup (NeoForge)
+
+1. Install NeoForge for 1.21.1 (21.1.267 or newer) with the NeoForge installer, then start the game once so the `mods/` folder is created.
+2. Put these jars into `mods/`: Architectury API, PlayerEngine, Player2NPC, MCA Reborn (all NeoForge builds from the table above), and `mca-player2-bridge-neoforge-<version>.jar`. Use the plain jar, not `-dev-shadow` or `-sources`.
+3. Start the Player2 app and sign in.
+4. Launch the game, spawn a Player2NPC companion, and walk into an MCA village.
+5. Try either of these:
    - Walk near a villager. Within `detectionRadius` (8 blocks by default), the villager greets your companion and the companion answers.
    - Tell your companion something like *"go talk to Alice"*. Its LLM should call `talk_to_villager Alice`.
-5. Conversation logs are saved to `<world>/data/mcaplayer2/villagers/<villager-uuid>.json`.
+6. Conversation logs are saved to `<world>/data/mcaplayer2/villagers/<villager-uuid>.json`.
+
+Fabric setup is the same, using the Fabric jars and Fabric API.
 
 ## Config
 
@@ -104,9 +120,17 @@ Prompts only use generic wording: *tamed companion*, *owned animal*, *companion*
 
 ## How it works (code map)
 
+Architectury multi-loader layout:
+
 ```
-src/main/java/dev/yucktheslime/mcaplayer2/
-  McaPlayer2Bridge.java          Fabric entry point; registers lifecycle/tick listeners
+common/    all logic (Mojang mappings; events via Architectury API)
+neoforge/  @Mod entry class + META-INF/neoforge.mods.toml (deps + mixin config)
+fabric/    ModInitializer entry class + fabric.mod.json
+
+common/src/main/java/dev/yucktheslime/mcaplayer2/
+  McaPlayer2Bridge.java          Common init; registers Architectury lifecycle/tick events
+  neoforge/McaPlayer2BridgeNeoForge (neoforge module)  NeoForge @Mod entry
+  fabric/McaPlayer2BridgeFabric     (fabric module)    Fabric entry
   goal/TalkToMcaVillagerGoal     PlayerEngine Task: path to villager, stay in range, face it, converse
   command/TalkToVillagerCommand  LLM command `talk_to_villager <name|uuid>`; runs the goal
   command/NearbyVillagersCommand LLM command `nearby_villagers`; lists villagers and their profiles
@@ -138,13 +162,26 @@ PlayerEngine and MCA Reborn don't publish API docs, so every class and method th
 ./gradlew build      # Java 21 required
 ```
 
-The jar is written to `build/libs/mca-player2-bridge-<version>.jar`. CI (`.github/workflows/build.yml`) builds on every push and pull request and uploads that jar as an artifact.
+The build produces:
 
-The build uses Gradle 9.5.0 (wrapper), Fabric Loom 1.17.21, and Mojang mappings. Loom 1.17 or newer is required because MCA 7.7.36 was built with Loom 1.17. Dependencies come from the Modrinth Maven (`maven.modrinth:<slug>:<version-id>`), the Fabric Maven, and the Architectury Maven.
+- `neoforge/build/libs/mca-player2-bridge-neoforge-<version>.jar`: the runnable NeoForge mod.
+- `fabric/build/libs/mca-player2-bridge-fabric-<version>.jar`: the runnable Fabric mod.
+
+Ignore the `-dev-shadow` and `-sources` jars; they're intermediate build outputs. CI (`.github/workflows/build.yml`) builds on every push and pull request and uploads the runnable jars as `mca-player2-bridge-neoforge-1.21.1` and `mca-player2-bridge-fabric-1.21.1`.
+
+Build tooling:
+
+- Gradle 9.5.0 (wrapper)
+- Architectury Loom 1.17.493. Loom 1.17 or newer is required because MCA 7.7.36 was built with Loom 1.17.
+- Architectury Plugin 3.5.170
+- Shadow 9.6.1
+- Mojang mappings
+
+Dependencies come from the Modrinth Maven (`maven.modrinth:<slug>:<version-id>`), maven.neoforged.net, the Fabric Maven, and the Architectury Maven. You can run a dev server with `./gradlew :neoforge:runServer`.
 
 ## Known limitations
 
-- **Not play-tested yet.** It compiles against the real APIs, but runtime behaviour such as timing, prompt quality, and PlayerEngine's turn gating is unverified.
+- **Not play-tested yet.** On NeoForge, a dedicated dev server (`:neoforge:runServer`) with MCA, PlayerEngine, and Player2NPC loads the bridge without errors. On startup the bridge writes its config and opens the world memory directory. Companion/villager conversations have not been tested in game: timing, prompt quality, and PlayerEngine's turn gating are unverified.
 - **Hearts are per player, not per companion.** MCA stores hearts per player UUID, and companions aren't players. The bridge reports the villager's hearts toward the **companion's owner**. It does not change MCA hearts.
 - **Villager replies need the Player2 app on the server machine.** Villager lines are generated server-side through `127.0.0.1:4315`. That works in singleplayer or on a server hosted on the same PC. On a dedicated server without the Player2 app, villagers fall back to short canned lines. Companions themselves still work, because PlayerEngine handles them.
 - **Villagers speak through MCA's chat pipeline, not its dialogue trees.** Lines go through MCA's `sendChatToAllAround` (MCA chat prefix, speech sound, players within 20 blocks). They are not added to MCA's interaction/dialogue GUI, and MCA's own chatAI module is not involved.
@@ -153,8 +190,8 @@ The build uses Gradle 9.5.0 (wrapper), Fabric Loom 1.17.21, and Mojang mappings.
 - **Villager lines arrive as chat messages.** They are fed to the companion as `Event.UserMessage` with the speaker set to `"<Name> (MCA villager)"`. PlayerEngine may treat that speaker as a non-owner user, so blacklist/whitelist settings in Player2NPC can affect it.
 - **Companion identity in memory** is keyed by the Player2 character name, because companion entity UUIDs can change on respawn. Two companions with the same name share history.
 - **Owned-entity detection is best effort.** The NBT fallback calls `saveWithoutId` on nearby entities when a conversation opens. That costs some performance in mob-dense areas; turn it off with `ownerNbtFallback: false`. Pet mods that store ownership under an unusual key or a deeper object need an `ownerNbtKeys` or `ownerAccessorMethods` entry, or a registered `OwnerUuidResolver`.
-- **Fabric only.** MCA Reborn, PlayerEngine, and Player2NPC all publish NeoForge builds for 1.21.1, so a NeoForge port through Architectury (common/fabric/neoforge) is feasible. That's future work. The code keeps MCA and PlayerEngine calls inside `util/` and `player2/` to make a port easier.
-- MCA's Fabric jar ships a `classTweaker v1` access widener. If the game fails to load MCA, update Fabric Loader to the latest version.
+- **Common code is compiled against the Fabric builds** of PlayerEngine and MCA. That's the normal Architectury setup, and `javap` shows the same class and method names in the NeoForge jars. The NeoForge module then compiles against the NeoForge jars. Keep the two loaders' dependency versions in step.
+- (Fabric) MCA's Fabric jar ships a `classTweaker v1` access widener. If the game fails to load MCA, update Fabric Loader to the latest version.
 
 ## License
 

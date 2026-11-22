@@ -3,7 +3,7 @@ package dev.yucktheslime.mcaplayer2.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import dev.yucktheslime.mcaplayer2.McaPlayer2Bridge;
-import net.fabricmc.loader.api.FabricLoader;
+import dev.architectury.platform.Platform;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -84,7 +84,7 @@ public final class BridgeConfig {
     }
 
     public static Path path() {
-        return FabricLoader.getInstance().getConfigDir().resolve(McaPlayer2Bridge.MOD_ID + ".json");
+        return Platform.getConfigFolder().resolve(McaPlayer2Bridge.MOD_ID + ".json");
     }
 
     public static void load() {

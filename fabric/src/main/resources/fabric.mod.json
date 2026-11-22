@@ -15,7 +15,7 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "dev.yucktheslime.mcaplayer2.McaPlayer2Bridge"
+      "dev.yucktheslime.mcaplayer2.fabric.McaPlayer2BridgeFabric"
     ]
   },
   "mixins": [
@@ -26,6 +26,7 @@
     "minecraft": "~1.21.1",
     "java": ">=21",
     "fabric-api": "*",
+    "architectury": ">=13.0.8",
     "playerengine": ">=1.21.1-1.4.0",
     "mca": ">=7.7.0"
   },

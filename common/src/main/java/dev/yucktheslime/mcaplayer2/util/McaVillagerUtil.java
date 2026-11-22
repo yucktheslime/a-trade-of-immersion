@@ -26,7 +26,7 @@ import java.util.UUID;
  * live here so an MCA API change only breaks one file.
  *
  * <p>Every MCA method used below was checked with {@code javap} against
- * {@code mca-fabric-7.7.36-beta.3+1.21.1.jar} (Modrinth version 7.7.36+1.21.1):
+ * {@code mca-fabric-7.7.36-beta.3+1.21.1.jar} and {@code mca-neoforge-7.7.36-beta.3+1.21.1.jar} (Modrinth version 7.7.36+1.21.1):
  * {@code VillagerEntityMCA#getRelationships().getGender()}, {@code VillagerLike#getAgeState()},
  * {@code VillagerLike#getProfessionId()}, {@code VillagerLike#getTraits().getTraits()},
  * {@code Traits.Trait#getId()}, {@code VillagerBrain#getPersonality().getId()},

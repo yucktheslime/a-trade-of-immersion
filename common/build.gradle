@@ -1,0 +1,14 @@
+architectury {
+    common rootProject.enabled_platforms.split(",")
+}
+
+dependencies {
+    // Only used for the Mixin / mixinextras annotations; do not reference Fabric classes in common.
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    modImplementation "dev.architectury:architectury:${rootProject.architectury_api_version}"
+
+    // Compile against the Fabric builds (remapped to Mojang mappings by Loom). Class/package
+    // names are identical in the NeoForge builds (verified with javap).
+    modCompileOnly "maven.modrinth:playerengine:${rootProject.playerengine_fabric_version}"
+    modCompileOnly "maven.modrinth:minecraft-comes-alive-reborn:${rootProject.mca_fabric_version}"
+}
