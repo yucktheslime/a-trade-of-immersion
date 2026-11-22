@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "mcaplayer2",
+  "version": "${version}",
+  "name": "MCA-Player2 Bridge",
+  "description": "Lets Player2 AI companions talk to MCA villagers.",
+  "authors": [
+    "yucktheslime"
+  ],
+  "contact": {
+    "sources": "https://github.com/yucktheslime/mca-player2-bridge"
+  },
+  "license": "LGPL-3.0-or-later",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.yucktheslime.mcaplayer2.McaPlayer2Bridge"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  }
+}
