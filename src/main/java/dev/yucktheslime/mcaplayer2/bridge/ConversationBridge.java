@@ -3,6 +3,8 @@ package dev.yucktheslime.mcaplayer2.bridge;
 import com.player2.playerengine.player2api.AgentConversationData;
 import dev.yucktheslime.mcaplayer2.McaPlayer2Bridge;
 import dev.yucktheslime.mcaplayer2.config.BridgeConfig;
+import dev.yucktheslime.mcaplayer2.context.OwnedCompanionContextProvider;
+import dev.yucktheslime.mcaplayer2.context.PromptContextProvider;
 import dev.yucktheslime.mcaplayer2.util.McaVillagerUtil;
 import dev.yucktheslime.mcaplayer2.util.VillagerProfile;
 import dev.yucktheslime.mcaplayer2.memory.ConversationMemoryStore;
@@ -106,11 +108,14 @@ public final class ConversationBridge {
         VillagerProfile profile = McaVillagerUtil.profile(villager, owner);
         List<String> history = ConversationMemoryStore.get().recentLines(villager.getUUID(), companionName, cfg.historyLinesInPrompt);
 
-        CompanionAdapter.injectInfo(companion, buildCompanionContext(profile, history, initiatedByCompanion));
+        String context = buildCompanionContext(profile, history, initiatedByCompanion);
+        List<String> extra = PromptContextProvider.collect(companion, villager);
+        if (!extra.isEmpty()) context += "\nAround you:\n" + String.join("\n", extra);
+        CompanionAdapter.injectInfo(companion, context);
 
         if (!McaVillagerUtil.canTalk(villager)) return;
         MinecraftServer server = ce.getServer();
-        VillagerReplyGenerator.greeting(profile, companionName, history)
+        VillagerReplyGenerator.greeting(profile, companionName, history, OwnedCompanionContextProvider.INSTANCE.villagerOwnLines(villager))
                 .thenAccept(line -> runOnServer(server, () -> villagerSpeaks(companion, villager, line, now)));
     }
 
@@ -169,7 +174,7 @@ public final class ConversationBridge {
         List<String> history = ConversationMemoryStore.get().recentLines(target.getUUID(), companionName, cfg.historyLinesInPrompt);
         VillagerEntityMCA v = target;
         MinecraftServer server = ce.getServer();
-        VillagerReplyGenerator.reply(profile, companionName, history, message)
+        VillagerReplyGenerator.reply(profile, companionName, history, message, OwnedCompanionContextProvider.INSTANCE.villagerOwnLines(v))
                 .thenAccept(line -> runOnServer(server, () -> villagerSpeaks(companion, v, line, now)));
     }
 

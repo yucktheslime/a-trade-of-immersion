@@ -21,6 +21,7 @@ This bridge connects the two in both directions.
 | Villagers start conversations | A server-tick listener notices companions within `detectionRadius` of an MCA villager. The villager greets the companion through MCA's own villager chat (`Messenger#sendChatToAllAround`), then turns its head to face the companion. | `bridge/ConversationBridge` |
 | Villagers answer | A mixin captures every line a companion speaks. If a nearby villager is addressed by name, or is already talking with that companion, it answers. The answer is generated from the companion's words, the villager's MCA persona, and the shared memory. It goes out through MCA chat and comes back to the companion as an incoming message, so the companion's LLM replies. | `mixin/`, `bridge/VillagerReplyGenerator` |
 | Memory | Each villager gets a JSON conversation log in the world save, which both sides read across sessions. | `memory/ConversationMemoryStore` |
+| Tamed companions / owned animals | When a conversation opens, nearby living entities are checked for an owner UUID. Each owner is resolved to an MCA villager (or a player), and the companion is told things like *This wolf "Rex" is a tamed companion belonging to the villager Alice.* Villagers are told about their own tamed companions nearby. This works with vanilla tameables and with modded pets through pluggable resolvers. | `util/OwnedEntityUtil`, `util/OwnerUuidResolver`, `context/` |
 | Loop guard | Each companion/villager pair is limited to `maxTurnsPerConversation` villager lines per conversation, and greetings have a cooldown, so two AIs can't chat forever. | `bridge/ConversationBridge` |
 
 ## Requirements
@@ -70,8 +71,36 @@ The config is at `config/mcaplayer2.json` and is created on first launch.
 | `player2GameKey` | `mca-player2-bridge` | Value of the `player2-game-key` header |
 | `llmTimeoutSeconds` | `20` | HTTP timeout for villager replies |
 | `villagerReplyMaxWords` | `30` | Length limit for villager replies |
+| `detectOwnedCompanions` | `true` | Detect tamed companions / owned animals and describe their owners |
+| `ownedCompanionScanRadius` | `12.0` | Scan radius for owned entities |
+| `maxOwnedEntitiesInPrompt` | `6` | Max owned entities described per prompt |
+| `ownerNbtFallback` | `true` | Check saved NBT for owner UUIDs when no resolver matches |
+| `ownerNbtKeys` | `Owner, OwnerUUID, owner, ownerUUID, OwnerUuid, ownerUuid` | NBT keys checked, at the top level and one compound deep |
+| `ownerAccessorMethods` | `[]` | No-arg methods returning a separate pet-data object that holds the owner (for mods that store ownership outside the entity) |
+| `guessOwnerFromNearestVillager` | `false` | Attribute an unresolved owner to the nearest villager, marked as a guess |
+| `mentionUnknownOwners` | `true` | Mention owned animals whose owner can't be found |
 | `maxLogEntries` | `100` | Entries kept per villager log |
 | `historyLinesInPrompt` | `10` | Past lines injected into prompts |
+
+## Tamed companions and owned animals
+
+`OwnedEntityUtil.ownerOf(entity)` finds an owner UUID without referencing any specific mod. It tries these in order and caches each result for 10 seconds:
+
+1. **Vanilla `OwnableEntity#getOwnerUUID()`.** Covers wolves, cats, parrots, horses, and any modded mob that implements it.
+2. **Reflection.** Looks for a public no-arg method returning `UUID` named `getOwnerUUID`, `getOwnerUuid`, `getOwnerId` or `getOwner`, on the entity or on an object returned by one of the `ownerAccessorMethods` in the config.
+3. **Extra resolvers registered by other code.** Use `OwnedEntityUtil.registerResolver(OwnerUuidResolver)`.
+4. **NBT fallback.** Reads the entity's saved data and looks for an int-array or string UUID under `ownerNbtKeys`.
+
+Owners are then resolved in this order:
+
+1. An exact UUID match against loaded MCA villagers.
+2. An online player.
+3. Optionally, the nearest villager, worded as a guess.
+4. Otherwise, "owner not around".
+
+The resulting lines go through `context/PromptContextProvider`, the same injection layer that adds MCA villager context when `TalkToMcaVillagerGoal` or a proximity greeting opens a conversation. You can register more providers with `PromptContextProvider.register(...)`.
+
+Prompts only use generic wording: *tamed companion*, *owned animal*, *companion*. Note that MCA villagers don't tame animals by themselves, so a villager owner usually comes from another mod or a command.
 
 ## How it works (code map)
 
@@ -87,6 +116,10 @@ src/main/java/dev/yucktheslime/mcaplayer2/
   bridge/ConversationBridge      Two-way orchestration: greetings, replies, turn limits, look-at
   bridge/VillagerReplyGenerator  Villager lines through the Player2 local API, with canned-line fallback
   memory/ConversationMemoryStore Per-villager JSON logs in the world save
+  util/OwnedEntityUtil           Generic owner-UUID detection (vanilla / reflection / NBT) and owner resolution
+  util/OwnerUuidResolver         Plug-in interface for extra owner resolvers
+  context/PromptContextProvider  Registry of extra prompt-context sources
+  context/OwnedCompanionContextProvider  "This X is a tamed companion belonging to <villager>" lines
   config/BridgeConfig            JSON config
   mixin/PlayerEngineCommandsMixin            Registers the commands in PlayerEngineCommands.init
   mixin/PlayerEngineConversationManagerMixin Captures companion speech at ConversationManager.onAICharacterMessage
@@ -119,6 +152,7 @@ The build uses Gradle 9.5.0 (wrapper), Fabric Loom 1.17.21, and Mojang mappings.
 - **Companion speech reaches villagers through a mixin** into `ConversationManager.onAICharacterMessage`, an internal PlayerEngine method, not a public API. It may break on PlayerEngine updates.
 - **Villager lines arrive as chat messages.** They are fed to the companion as `Event.UserMessage` with the speaker set to `"<Name> (MCA villager)"`. PlayerEngine may treat that speaker as a non-owner user, so blacklist/whitelist settings in Player2NPC can affect it.
 - **Companion identity in memory** is keyed by the Player2 character name, because companion entity UUIDs can change on respawn. Two companions with the same name share history.
+- **Owned-entity detection is best effort.** The NBT fallback calls `saveWithoutId` on nearby entities when a conversation opens. That costs some performance in mob-dense areas; turn it off with `ownerNbtFallback: false`. Pet mods that store ownership under an unusual key or a deeper object need an `ownerNbtKeys` or `ownerAccessorMethods` entry, or a registered `OwnerUuidResolver`.
 - **Fabric only.** MCA Reborn, PlayerEngine, and Player2NPC all publish NeoForge builds for 1.21.1, so a NeoForge port through Architectury (common/fabric/neoforge) is feasible. That's future work. The code keeps MCA and PlayerEngine calls inside `util/` and `player2/` to make a port easier.
 - MCA's Fabric jar ships a `classTweaker v1` access widener. If the game fails to load MCA, update Fabric Loader to the latest version.
 

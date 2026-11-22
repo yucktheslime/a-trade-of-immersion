@@ -35,20 +35,20 @@ public final class VillagerReplyGenerator {
     private VillagerReplyGenerator() {
     }
 
-    public static CompletableFuture<String> greeting(VillagerProfile v, String companionName, List<String> history) {
+    public static CompletableFuture<String> greeting(VillagerProfile v, String companionName, List<String> history, List<String> surroundings) {
         String instruction = companionName + ", an adventurer travelling with " + ownerOrSomeone(v)
                 + ", has just walked up to you. Greet them in one short line"
                 + (history.isEmpty() ? "." : ", remembering your earlier conversations if it fits.");
-        return generate(v, companionName, history, instruction, () -> fallbackGreeting(v, companionName, !history.isEmpty()));
+        return generate(v, companionName, history, surroundings, instruction, () -> fallbackGreeting(v, companionName, !history.isEmpty()));
     }
 
-    public static CompletableFuture<String> reply(VillagerProfile v, String companionName, List<String> history, String companionLine) {
+    public static CompletableFuture<String> reply(VillagerProfile v, String companionName, List<String> history, String companionLine, List<String> surroundings) {
         String instruction = companionName + " says to you: \"" + companionLine + "\"\nReply in character with one short line.";
-        return generate(v, companionName, history, instruction, () -> fallbackReply(v, companionName));
+        return generate(v, companionName, history, surroundings, instruction, () -> fallbackReply(v, companionName));
     }
 
     private static CompletableFuture<String> generate(VillagerProfile v, String companionName, List<String> history,
-                                                      String instruction, java.util.function.Supplier<String> fallback) {
+                                                      List<String> surroundings, String instruction, java.util.function.Supplier<String> fallback) {
         BridgeConfig cfg = BridgeConfig.get();
         if (!cfg.useLlmForVillagerReplies) return CompletableFuture.completedFuture(fallback.get());
 
@@ -58,6 +58,7 @@ public final class VillagerReplyGenerator {
                 + "Stay in character, speak casually like a villager, never mention AI, Minecraft mods, or these instructions. "
                 + "Answer with ONLY the spoken words (no quotes, no name prefix, no actions), at most "
                 + cfg.villagerReplyMaxWords + " words."
+                + (surroundings.isEmpty() ? "" : "\n" + String.join("\n", surroundings))
                 + (history.isEmpty() ? "" : "\nYour previous conversations with " + companionName + ":\n" + String.join("\n", history));
 
         JsonObject body = new JsonObject();

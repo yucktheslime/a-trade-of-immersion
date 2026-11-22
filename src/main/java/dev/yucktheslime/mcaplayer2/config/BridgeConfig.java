@@ -54,6 +54,26 @@ public final class BridgeConfig {
     /** Max words requested for a villager line. */
     public int villagerReplyMaxWords = 30;
 
+    /** Detect tamed companions / owned animals near the companion and tell it who owns them. */
+    public boolean detectOwnedCompanions = true;
+    /** Radius (blocks) scanned for owned entities when a conversation opens. */
+    public double ownedCompanionScanRadius = 12.0;
+    /** Max owned entities described in one prompt. */
+    public int maxOwnedEntitiesInPrompt = 6;
+    /** Use the (slower) saved-NBT fallback to find owner UUIDs on entities no resolver understands. */
+    public boolean ownerNbtFallback = true;
+    /** NBT keys checked by the fallback (top level and one compound deep). */
+    public java.util.List<String> ownerNbtKeys = java.util.List.of("Owner", "OwnerUUID", "owner", "ownerUUID", "OwnerUuid", "ownerUuid");
+    /**
+     * Optional no-arg accessor methods on an entity that return a separate data object holding the owner
+     * (that object is then checked for getOwnerUUID/getOwnerUuid/getOwnerId/getOwner). Empty by default.
+     */
+    public java.util.List<String> ownerAccessorMethods = java.util.List.of();
+    /** If an owner UUID matches no loaded villager or online player, attribute it to the nearest villager (marked as a guess). */
+    public boolean guessOwnerFromNearestVillager = false;
+    /** Mention owned animals whose owner could not be resolved. */
+    public boolean mentionUnknownOwners = true;
+
     /** Max entries kept per villager conversation log. */
     public int maxLogEntries = 100;
     /** How many past log lines are injected into prompts. */

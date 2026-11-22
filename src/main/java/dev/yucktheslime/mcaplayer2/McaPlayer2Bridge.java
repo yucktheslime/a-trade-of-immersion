@@ -2,6 +2,8 @@ package dev.yucktheslime.mcaplayer2;
 
 import dev.yucktheslime.mcaplayer2.bridge.ConversationBridge;
 import dev.yucktheslime.mcaplayer2.config.BridgeConfig;
+import dev.yucktheslime.mcaplayer2.context.OwnedCompanionContextProvider;
+import dev.yucktheslime.mcaplayer2.context.PromptContextProvider;
 import dev.yucktheslime.mcaplayer2.goal.TalkToMcaVillagerGoal;
 import dev.yucktheslime.mcaplayer2.memory.ConversationMemoryStore;
 import dev.yucktheslime.mcaplayer2.util.McaVillagerUtil;
@@ -31,6 +33,7 @@ public class McaPlayer2Bridge implements ModInitializer {
     @Override
     public void onInitialize() {
         BridgeConfig.load();
+        PromptContextProvider.register(OwnedCompanionContextProvider.INSTANCE);
         LOGGER.info("MCA-Player2 Bridge initializing (enabled={})", BridgeConfig.get().enabled);
 
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
