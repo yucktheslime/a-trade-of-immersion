@@ -1,5 +1,6 @@
 plugins {
-    id 'fabric-loom' version '1.7-SNAPSHOT'
+    // Loom >= 1.17 is required: MCA Reborn 7.7.36 was built with Loom 1.17.19 and older Loom refuses to remap it.
+    id 'fabric-loom' version '1.17.21'
     id 'maven-publish'
 }
 
@@ -11,18 +12,39 @@ base {
 }
 
 repositories {
-    // Add MCA and PlayerEngine repos here when ready
+    maven { url = 'https://maven.fabricmc.net/' }
+    maven { url = 'https://maven.architectury.dev/' }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Modrinth'
+                url = 'https://api.modrinth.com/maven'
+            }
+        }
+        filter {
+            includeGroup 'maven.modrinth'
+        }
+    }
     mavenCentral()
-    maven { url 'https://maven.fabricmc.net/' }
+}
+
+loom {
+    // We use no members widened by MCA's class tweaker; skip applying dependency access wideners.
+    enableTransitiveAccessWideners = false
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.minecraft_version}+build.1:v2"
+    // Mojang mappings: the scaffold's code already used Mojang names (net.minecraft.world.entity.*),
+    // and PlayerEngine / MCA APIs are documented here in Mojang names.
+    mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    // TODO: Add MCA Reborn and PlayerEngine as modImplementation once versions are pinned
+    modImplementation "maven.modrinth:minecraft-comes-alive-reborn:${project.mca_version}"
+    modImplementation "maven.modrinth:playerengine:${project.playerengine_version}"
+    modImplementation "dev.architectury:architectury-fabric:${project.architectury_version}"
+    modLocalRuntime "maven.modrinth:player2npc:${project.player2npc_version}"
 }
 
 processResources {
@@ -38,8 +60,14 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 }
 
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+    it.options.encoding = 'UTF-8'
+}
+
 jar {
+    def archiveBase = project.base.archivesName.get()
     from("LICENSE") {
-        rename { "${it}_${project.archivesBaseName}" }
+        rename { "${it}_${archiveBase}" }
     }
 }

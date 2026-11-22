@@ -3,12 +3,13 @@
   "id": "mcaplayer2",
   "version": "${version}",
   "name": "MCA-Player2 Bridge",
-  "description": "Lets Player2 AI companions talk to MCA villagers.",
+  "description": "Lets Player2 AI companions talk to MCA villagers, lets villagers talk back, and remembers their conversations.",
   "authors": [
     "yucktheslime"
   ],
   "contact": {
-    "sources": "https://github.com/yucktheslime/mca-player2-bridge"
+    "sources": "https://github.com/yucktheslime/mca-player2-bridge",
+    "issues": "https://github.com/yucktheslime/mca-player2-bridge/issues"
   },
   "license": "LGPL-3.0-or-later",
   "environment": "*",
@@ -17,9 +18,18 @@
       "dev.yucktheslime.mcaplayer2.McaPlayer2Bridge"
     ]
   },
+  "mixins": [
+    "mcaplayer2.mixins.json"
+  ],
   "depends": {
-    "fabricloader": ">=0.15.0",
+    "fabricloader": ">=0.17.2",
     "minecraft": "~1.21.1",
-    "java": ">=21"
+    "java": ">=21",
+    "fabric-api": "*",
+    "playerengine": ">=1.21.1-1.4.0",
+    "mca": ">=7.7.0"
+  },
+  "recommends": {
+    "player2npc": ">=1.21.1-1.4.0"
   }
 }
