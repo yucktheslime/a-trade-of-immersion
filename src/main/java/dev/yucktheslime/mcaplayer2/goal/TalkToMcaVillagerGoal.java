@@ -1,70 +1,144 @@
 package dev.yucktheslime.mcaplayer2.goal;
 
+import com.player2.playerengine.player2api.AgentConversationData;
+import com.player2.playerengine.tasks.base.Task;
+import com.player2.playerengine.tasks.movement.GetToEntityTask;
+import com.player2.playerengine.util.helpers.LookHelper;
+import dev.yucktheslime.mcaplayer2.bridge.ConversationBridge;
+import dev.yucktheslime.mcaplayer2.config.BridgeConfig;
+import dev.yucktheslime.mcaplayer2.player2.CompanionAdapter;
+import dev.yucktheslime.mcaplayer2.util.McaVillagerUtil;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 /**
- * Placeholder goal for a Player2 companion to approach and converse with an MCA villager.
+ * PlayerEngine task ("goal") for a Player2 companion: approach an MCA villager, stay in range,
+ * face it, and hold a conversation.
  *
- * In a full implementation this would:
- * 1. Use Automatone / PlayerEngine pathing to move near the target villager
- * 2. Extract villager name, personality, relationship, and recent dialogue context
- * 3. Inject that context into the Player2 companion's prompt
- * 4. Optionally trigger an MCA dialogue response
+ * <ol>
+ *   <li><b>Approach</b> - while farther than {@code talkArrivalDistance}, returns PlayerEngine's
+ *       {@link GetToEntityTask} as a sub-task, which drives the Automatone/Baritone pathfinder.</li>
+ *   <li><b>Open</b> - on arrival calls {@link ConversationBridge#beginConversation}, which injects the
+ *       villager's MCA data + remembered exchanges into the companion's Player2 prompt and makes the
+ *       villager greet it.</li>
+ *   <li><b>Stay</b> - keeps facing the villager ({@link LookHelper#lookAt(com.player2.playerengine.PlayerEngineController, net.minecraft.world.phys.Vec3)})
+ *       and re-paths if it wanders beyond {@code talkStayInRangeDistance}. Finishes after
+ *       {@code talkIdleTimeoutTicks} without a new line, or {@code talkMaxDurationTicks} total.</li>
+ * </ol>
+ *
+ * <p>PlayerEngine API used here was verified with javap/CFR against PlayerEngine 1.21.1-1.4.0:
+ * {@code Task} (abstract {@code onStart/onTick/onStop/isEqual/toDebugString}, public field
+ * {@code controller}, {@code fail(String)}, {@code setDebugState(String)}, overridable {@code isFinished()}),
+ * {@code GetToEntityTask(Entity, double)} and {@code LookHelper.lookAt(PlayerEngineController, Vec3)}
+ * (the same call PlayerEngine's own {@code LookAtOwnerTask} uses).
+ *
+ * <p>Started by the LLM-callable {@code talk_to_villager <name|uuid>} command, or from code via
+ * {@code controller.runUserTask(new TalkToMcaVillagerGoal(...))}.
  */
-public class TalkToMcaVillagerGoal {
-    private static final Logger LOGGER = LoggerFactory.getLogger("McaPlayer2Bridge");
+public class TalkToMcaVillagerGoal extends Task {
+    private static final double SEARCH_RADIUS = 64.0;
 
-    private final LivingEntity companion;
-    private final LivingEntity targetVillager;
+    private final String target;
+    private VillagerEntityMCA villager;
+    private boolean opened;
     private boolean finished;
+    private long openedAt;
 
-    public TalkToMcaVillagerGoal(LivingEntity companion, LivingEntity targetVillager) {
-        this.companion = companion;
-        this.targetVillager = targetVillager;
+    /** @param target villager UUID string or (part of) its MCA name; underscores are treated as spaces */
+    public TalkToMcaVillagerGoal(String target) {
+        this.target = target;
     }
 
+    /**
+     * Kept from the original scaffold. The companion is implied by the PlayerEngine controller
+     * that runs this task, so {@code companion} is only used for logging/compatibility.
+     */
+    public TalkToMcaVillagerGoal(LivingEntity companion, LivingEntity targetVillager) {
+        this(targetVillager.getStringUUID());
+        if (targetVillager instanceof VillagerEntityMCA v) this.villager = v;
+    }
+
+    @Override
+    protected void onStart() {
+        opened = false;
+        finished = false;
+        if (villager == null || !villager.isAlive()) resolve();
+    }
+
+    private void resolve() {
+        LivingEntity self = controller.getEntity();
+        if (self == null || self.getServer() == null) return;
+        Optional<VillagerEntityMCA> found = McaVillagerUtil.find(self.getServer(), self, target, SEARCH_RADIUS);
+        villager = found.orElse(null);
+    }
+
+    @Override
+    protected Task onTick() {
+        if (finished) return null;
+        if (villager == null || !villager.isAlive() || villager.isRemoved()) {
+            resolve();
+            if (villager == null) {
+                if (opened) {
+                    finished = true; // villager left/died mid-conversation
+                } else {
+                    fail("No MCA villager named or with UUID '" + target + "' within " + (int) SEARCH_RADIUS + " blocks");
+                }
+                return null;
+            }
+        }
+
+        BridgeConfig cfg = BridgeConfig.get();
+        LivingEntity self = controller.getEntity();
+        double dist = self.distanceTo(villager);
+        String vName = McaVillagerUtil.name(villager);
+
+        if (!opened) {
+            if (dist > cfg.talkArrivalDistance + 0.5) {
+                setDebugState("Walking to " + vName);
+                return new GetToEntityTask(villager, cfg.talkArrivalDistance);
+            }
+            LookHelper.lookAt(controller, villager.getEyePosition());
+            setDebugState("Greeting " + vName);
+            ConversationBridge.get().beginConversation(CompanionAdapter.dataFor(controller), villager, true);
+            opened = true;
+            openedAt = self.level().getGameTime();
+            return null;
+        }
+
+        long now = self.level().getGameTime();
+        AgentConversationData data = CompanionAdapter.dataFor(controller);
+        long last = Math.max(openedAt, ConversationBridge.get().lastActivity(data, villager));
+        if (now - last > cfg.talkIdleTimeoutTicks || now - openedAt > cfg.talkMaxDurationTicks) {
+            finished = true;
+            return null;
+        }
+        if (dist > cfg.talkStayInRangeDistance) {
+            setDebugState("Following " + vName + " to keep talking");
+            return new GetToEntityTask(villager, cfg.talkArrivalDistance);
+        }
+        setDebugState("Talking to " + vName);
+        LookHelper.lookAt(controller, villager.getEyePosition());
+        return null;
+    }
+
+    @Override
     public boolean isFinished() {
         return finished;
     }
 
-    public void tick() {
-        if (finished || targetVillager == null || !targetVillager.isAlive()) {
-            finished = true;
-            return;
-        }
-
-        Level level = companion.level();
-        if (level.isClientSide) return;
-
-        double distance = companion.distanceTo(targetVillager);
-
-        if (distance > 4.0) {
-            // TODO: Hand off to Automatone / PlayerEngine pathfinding
-            LOGGER.debug("Companion needs to path closer to MCA villager ({} blocks)", distance);
-        } else {
-            // In range — build context and send to Player2
-            String context = buildVillagerContext();
-            LOGGER.info("Companion is in range. Injecting MCA context into Player2 prompt: {}", context);
-
-            // TODO: Call Player2 / PlayerEngine conversation API with the injected context
-            // Example: companionController.addSystemMessage(context);
-
-            finished = true;
-        }
+    @Override
+    protected void onStop(Task interruptTask) {
     }
 
-    private String buildVillagerContext() {
-        // Placeholder — replace with real MCA API calls once dependency is present
-        String name = targetVillager.getName().getString();
-        return String.format(
-                "You are talking to an MCA villager named %s. " +
-                "They have their own personality and relationship with the player. " +
-                "Speak naturally to them as another person in the world.",
-                name
-        );
+    @Override
+    protected boolean isEqual(Task other) {
+        return other instanceof TalkToMcaVillagerGoal t && t.target.equalsIgnoreCase(target);
+    }
+
+    @Override
+    protected String toDebugString() {
+        return "Talk to MCA villager " + target;
     }
 }
