@@ -16,10 +16,12 @@ The AI is **your choice and can be free**:
 
 - a local model through [Ollama](https://ollama.com);
 - any OpenAI-compatible API (OpenRouter, LM Studio, llama.cpp, vLLM, ...);
-- a [Kagrenac](https://github.com/Dwemer-Dynamics/Kagrenac) server.
+- a [Kagrenac](https://github.com/Dwemer-Dynamics/Kagrenac) server in DwemerDistro: the **CHIM-style** setup, with a
+  dashboard, server-side memory and history, NPC bios, NPC selection, and spoken replies. The server is included in
+  [`kagrenac-server/`](kagrenac-server/MINECRAFT.md). Setup guide: **[docs/KAGRENAC_SETUP.md](docs/KAGRENAC_SETUP.md)**.
 
 
-> Status: **alpha (0.2.0)**. Tested in-game on NeoForge with the offline mock AI. See [what was verified](#verified-in-game-020) and the [roadmap](docs/ROADMAP.md).
+> Status: **alpha (0.3.0)**. Tested in-game on NeoForge with the offline mock AI; 0.3.0 was also tested against the bundled Kagrenac server (mock model). See [what was verified](#verified-in-game) and the [roadmap](docs/ROADMAP.md).
 > Mod id `tradeofimmersion`. Upgrading from 0.2.0? See [Upgrading](#upgrading-from-020). History: [CHANGELOG](CHANGELOG.md).
 
 ## Requirements (NeoForge 1.21.1)
@@ -30,11 +32,11 @@ The AI is **your choice and can be free**:
 | Architectury API | 13.0.8 or newer | https://modrinth.com/mod/architectury-api |
 | MCA Reborn | 7.7.36+1.21.1 | https://modrinth.com/mod/minecraft-comes-alive-reborn/version/S2Ln2tIn |
 | *(optional)* MCA: Female Gender Physics | 0.1.8 | https://www.curseforge.com/minecraft/mc-mods/mca-female-gender-physics |
-| A Trade of Immersion | `a-trade-of-immersion-neoforge-0.2.0.jar` | GitHub Actions artifact `a-trade-of-immersion-neoforge-1.21.1` |
+| A Trade of Immersion | `a-trade-of-immersion-neoforge-0.3.0.jar` | GitHub Actions artifact `a-trade-of-immersion-neoforge-1.21.1` |
 
 Use the plain jar, not `-dev-shadow` or `-sources`.
 
-The Fabric build (`a-trade-of-immersion-fabric-0.2.0.jar`, which needs Fabric API and the Fabric MCA build) compiles from the same code, but it is less tested.
+The Fabric build (`a-trade-of-immersion-fabric-0.3.0.jar`, which needs Fabric API and the Fabric MCA build) compiles from the same code, but it is less tested.
 
 ## Setting up the AI
 
@@ -76,20 +78,37 @@ After editing it, run `/npc ai reload`, then `/npc ai status` to check it.
 
 Set `aiBaseUrl` (for example `http://localhost:1234/v1` for LM Studio), `aiModel`, and, if the server needs one, a key.
 
-### Option D: Kagrenac
+### Option D: Kagrenac, the CHIM-style brain (recommended for immersion)
 
-Run a Kagrenac server (https://github.com/Dwemer-Dynamics/Kagrenac). Then set:
+**Step-by-step guide for Windows and CurseForge: [docs/KAGRENAC_SETUP.md](docs/KAGRENAC_SETUP.md).**
 
-```json
-"aiBackend": "kagrenac",
-"kagrenacBaseUrl": "http://127.0.0.1:19000/custom-mods/KagrenacServer"
-```
+You do not load anything extra in CurseForge. The server runs in DwemerDistro, the same local server
+package CHIM uses. In short:
 
-Put the token in the `KAGRENAC_TOKEN` environment variable, or in `kagrenacToken`.
+1. Install DwemerDistro and run **Update Distro**.
+2. In the distro shell, run `git clone` on this repository, then `kagrenac-server/scripts/deploy_toi.sh`.
+3. On the dashboard (`http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer/`), paste your OpenRouter key
+   under **API keys**. The server comes set to Gemma.
+4. Put the server token in the `TOI_KAGRENAC_TOKEN` environment variable.
+5. In game, run `/npc ai preset kagrenac`, then `/npc ai status`.
 
-- The mod uses protocol v1: `turn.php`, and `event.php` for gifts and combat.
-- It offers Kagrenac's three actions (`follow_player`, `hold_position`, `attack_hostile`).
-- The server keeps the NPC bios and history. The full action set needs Option A, B or C.
+What you get with the bundled server ([kagrenac-server/](kagrenac-server/MINECRAFT.md)):
+
+- **Prompts, history and memory live on the server.** You can read and edit them on the dashboard.
+- **All 13 actions:** follow, stay, attack the nearest hostile, attack a named target, go to, mount, dismount,
+  equip, use/eat, give, pick up, inspect, talk to a villager.
+  - The server checks every action against its allowlist, then the mod checks it again against its own
+    allowlist (`kagrenacAllowedActions`).
+  - The mod reports each outcome back to `result.php`.
+- **Events:** deaths, attacks and damage, gifts, villager conversations, MCA family changes and action outcomes
+  go to `event.php`, so NPCs can tell you "what happened".
+- **NPC bios:** companion and MCA villager bios (personality, profession, family) appear on the dashboard's
+  **NPC bios** page. The mod never overwrites a bio you edit there.
+- **NPC selection:** when several of your companions are near and you name none, `decision.php` picks who answers.
+- **Interruptions:** a new line while a reply is still coming cancels it (`cancel.php`).
+- **Voice (off by default):** PocketTTS replies played from the NPC's position. Set `voiceEnabled`.
+
+A plain upstream Kagrenac template server also works, but only with its 3 actions and 4 event types.
 
 ### Offline mock
 
@@ -145,6 +164,9 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `/npc do <npc> <json>` | op | run actions directly, e.g. `{"action":"mount","target":"horse"}` |
 | `/npc dismiss <npc>` | owner/op | drop their items and remove them |
 | `/npc ai status` / `/npc ai reload` | all / op | backend status and errors; reload the config |
+| `/npc ai preset <kagrenac\|openrouter\|ollama\|mock>` | op | switch the AI backend and save the config |
+| `/npc ai cancel <npc>` | owner/op | cancel the companion's pending reply (Kagrenac: `cancel.php`) |
+| `/npc ai bios` | op | push companion and villager bios to the Kagrenac dashboard now |
 | `/toi gender\|body <npc> ...` | op | MCA body traits (size, width, breast, skin genes, ...); the mcabp traits too when installed |
 
 ## Config (main keys)
@@ -160,7 +182,19 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `aiMaxRequestsPerMinute` | 20 | global cap on AI calls |
 | `aiMinSecondsBetweenTurns` | 2 | per-companion gap; newer triggers wait, latest wins |
 | `aiFallbackToMock`, `aiFailureCooldownSeconds` | true, 60 | behavior when the backend is down |
-| `kagrenacBaseUrl`, `kagrenacToken`, `kagrenacSessionId` | | for Kagrenac; the session defaults to `mc-<world name>` |
+| `kagrenacBaseUrl` | `http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer` | Kagrenac server |
+| `kagrenacToken` | empty | empty = env `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) |
+| `kagrenacSessionId` | empty | defaults to `mc-<world name>` |
+| `kagrenacAllowedActions` | all 13 | the client-side action allowlist |
+| `kagrenacLogEvents`, `kagrenacSyncBios`, `kagrenacUseDecision`, `kagrenacCancelOnInterrupt` | true | events, bios, NPC selection, cancel on interruption |
+
+**Voice (Kagrenac, client side)**
+
+| Key | Default | Meaning |
+|---|---|---|
+| `voiceEnabled` | false | speak NPC replies (needs TTS on the Kagrenac server) |
+| `voiceVillagers` | true | voice MCA villagers' lines too |
+| `voiceVolume`, `voiceRange` | 1.0, 24 | volume and hearing distance in blocks (Voice/Speech slider applies) |
 
 **Chat and memory**
 
@@ -186,7 +220,33 @@ Saved data lives in `<world>/data/tradeofimmersion/`:
 - `villagers/<uuid>.json`: villager conversation logs;
 - `companion_bodies.json`.
 
-## Verified in-game (0.2.0)
+## Verified in-game
+
+### 0.3.0: Kagrenac
+
+Tested with the NeoForge dev client against the bundled `kagrenac-server/`, which ran on PHP 8.4 and
+PostgreSQL 17 with the server's **mock model**.
+
+- `/npc ai status` reports the server, its schema and the 13 offered actions.
+- Each of these ran, and its outcome reached `result.php`: follow, stay, mount, dismount, go_to (a failure,
+  reported), pick up, equip, eat, give (a correct failure), inspect, attack a zombie, and talk to an MCA villager.
+- Deaths and damage were logged, and "what happened?" was answered from them.
+- Bios for the companions and an MCA villager, including family, showed up on the dashboard table.
+- A second line cancelled the pending turn. NPC selection ran for an unnamed line.
+- Voice came from real pocket-tts, through a small wrapper rather than DwemerDistro's PocketTTS, and played
+  positionally. The audio was captured to a file, not listened to.
+
+Not yet tested:
+
+- a real OpenRouter model through the server;
+- the real DwemerDistro/Apache install (`deploy_toi.sh`);
+- `attack_hostile` on its own;
+- Fabric;
+- multiplayer voice.
+
+Details: [kagrenac-server/ports/minecraft/README.md](kagrenac-server/ports/minecraft/README.md).
+
+### 0.2.0
 
 Tested on NeoForge 21.1.267, MCA 7.7.36 and MCA: Female Gender Physics, using the mock backend. Screenshots are in the release folder.
 
@@ -211,6 +271,9 @@ Not tested in-game with a live LLM: real Ollama/OpenRouter output depends on the
 - Items moved through the inventory screen are not reported as gifts. Only right-click hand-overs are.
 - Charged items (bows, tridents, modded staffs) are released after a fixed 1 second charge.
 - Fabric is compiled, but it is not play-tested.
+- Kagrenac voice is fetched by each player's own game. In multiplayer, each player who wants voice needs the
+  Kagrenac URL and token in their own client config.
+- No speech input yet (typing only); it is on the roadmap.
 
 ## Upgrading from 0.2.0
 

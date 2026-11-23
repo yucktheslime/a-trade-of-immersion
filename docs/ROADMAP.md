@@ -25,6 +25,17 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 | Companion <-> MCA villager conversations through the same backend | done | uses MCA personality, mood, profession, hearts |
 | Basic chat filter: only real player dialogue (no command output, advancements, error codes) | done | system messages never reach the chat hook; typed commands/codes are dropped |
 
+## 0.3.0 - Kagrenac, the CHIM-style brain
+
+| Feature | Status | Notes |
+|---|---|---|
+| Kagrenac protocol v1 client: turns with game context, events, results, cancel, decision | done | tested against the bundled server with its mock model |
+| Bundled server `kagrenac-server/` (13 actions, game events, bios, voice hints) for DwemerDistro | partial | tested on php -S + PostgreSQL; the real DwemerDistro install is not tested yet |
+| Companion + MCA villager bios (personality, profession, family) on the dashboard | done | game bios never overwrite operator edits |
+| Positional NPC voice through speak.php / PocketTTS | done | off by default; tested with pocket-tts behind a wrapper, captured to a file |
+| Speech input (push-to-talk) | planned | through Kagrenac `listen.php` (Parakeet): a push-to-talk key records the microphone and the text lands in the chat box for editing before it is sent |
+| Real-model tuning (OpenRouter Gemma prompts for the 13 actions) | planned | needs play-testing with a key |
+
 ## Phase 2 - MCA relationships and family (next)
 
 - Hook MCA Reborn relationship/family events (courting, engagement, marriage, births, divorce, deaths of
@@ -71,12 +82,12 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 - Learn from past mistakes: summarize failed actions and bad outcomes ("the creeper blew up my boat")
   into lessons stored per NPC and retrieved when a similar situation comes up, so failures are not repeated.
 - Long-term memory compaction (daily diary summaries) and retrieval by relevance instead of only "last N events".
-- Optional voice (TTS/STT through Kagrenac's speak/listen endpoints).
+- Speech input (STT through Kagrenac's listen endpoint); TTS shipped in 0.3.0.
 
-## Known limits (0.2.0)
+## Known limits (0.3.0)
 
 - Mojang skin lookups are rate-limited; a companion shows a default skin until the lookup succeeds.
 - Fabric builds and compiles but is less tested than NeoForge.
 - Items moved through the inventory screen are not reported as "gifts" (only right-click hand-overs are).
-- Kagrenac only offers its three built-in actions (follow, hold position, attack hostile); the full action
-  set needs the `openai` backend.
+- A plain upstream Kagrenac template only offers its three built-in actions; the bundled `kagrenac-server/`
+  offers all 13.
