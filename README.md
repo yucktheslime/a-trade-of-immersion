@@ -18,10 +18,9 @@ The AI is **your choice and can be free**:
 - any OpenAI-compatible API (OpenRouter, LM Studio, llama.cpp, vLLM, ...);
 - a [Kagrenac](https://github.com/Dwemer-Dynamics/Kagrenac) server.
 
-It no longer uses Player2, PlayerEngine or Player2NPC.
 
 > Status: **alpha (0.2.0)**. Tested in-game on NeoForge with the offline mock AI. See [what was verified](#verified-in-game-020) and the [roadmap](docs/ROADMAP.md).
-> Formerly "MCA-Player2 Bridge". The mod id (`mcaplayer2`), config file and save data paths are unchanged, so existing worlds and configs keep working.
+> Mod id `tradeofimmersion`. Upgrading from 0.2.0? See [Upgrading](#upgrading-from-020). History: [CHANGELOG](CHANGELOG.md).
 
 ## Requirements (NeoForge 1.21.1)
 
@@ -39,7 +38,7 @@ The Fabric build (`a-trade-of-immersion-fabric-0.2.0.jar`, which needs Fabric AP
 
 ## Setting up the AI
 
-The config file is `config/mcaplayer2.json`. It is created on first launch.
+The config file is `config/tradeofimmersion.json`. It is created on first launch.
 
 After editing it, run `/npc ai reload`, then `/npc ai status` to check it.
 
@@ -60,8 +59,8 @@ After editing it, run `/npc ai reload`, then `/npc ai status` to check it.
 
 1. Make a key at https://openrouter.ai/keys.
 2. Set it as an environment variable before launching the game or server:
-   - Windows: `setx MCAPLAYER2_API_KEY "sk-or-..."`, then restart the launcher.
-   - Linux / macOS: `export MCAPLAYER2_API_KEY=sk-or-...`
+   - Windows: `setx TOI_API_KEY "sk-or-..."`, then restart the launcher.
+   - Linux / macOS: `export TOI_API_KEY=sk-or-...`
    - `OPENROUTER_API_KEY` also works.
 3. In the config, set:
 
@@ -139,14 +138,14 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `/npc say <npc> <text>` | owner/op | talk from anywhere |
 | `/npc follow\|stay\|wander <npc>` | owner/op | movement mode |
 | `/npc inventory <npc>` | owner/op | open the bag |
-| `/npc skin <npc> <spec>` | owner/op | `player:<name>`, `url:<https://...png>`, `file:<name.png>` (in `config/mcaplayer2/skins/`), `default`, `slim`, `wide` |
+| `/npc skin <npc> <spec>` | owner/op | `player:<name>`, `url:<https://...png>`, `file:<name.png>` (in `config/tradeofimmersion/skins/`), `default`, `slim`, `wide` |
 | `/npc gender <npc> <male\|female\|neutral>` | owner/op | also drives the MCA body |
 | `/npc persona <npc> <text>` | owner/op | personality given to the AI |
 | `/npc memory <npc>` | owner/op | recent memories |
 | `/npc do <npc> <json>` | op | run actions directly, e.g. `{"action":"mount","target":"horse"}` |
 | `/npc dismiss <npc>` | owner/op | drop their items and remove them |
 | `/npc ai status` / `/npc ai reload` | all / op | backend status and errors; reload the config |
-| `/mcaplayer2 gender\|body <npc> ...` | op | MCA body traits (size, width, breast, skin genes, ...); the mcabp traits too when installed |
+| `/toi gender\|body <npc> ...` | op | MCA body traits (size, width, breast, skin genes, ...); the mcabp traits too when installed |
 
 ## Config (main keys)
 
@@ -180,7 +179,7 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `defaultSkin`, `companionGender` | empty, `male` | defaults for new companions |
 | `companionMcaBody`, `companionAppearance` | true, `player_skin` | MCA body on; `mca_generated` gives an MCA villager look instead of a skin |
 
-Saved data lives in `<world>/data/mcaplayer2/`:
+Saved data lives in `<world>/data/tradeofimmersion/`:
 
 - `npcs/<uuid>.json`: memory;
 - `item_knowledge.json`;
@@ -212,6 +211,19 @@ Not tested in-game with a live LLM: real Ollama/OpenRouter output depends on the
 - Items moved through the inventory screen are not reported as gifts. Only right-click hand-overs are.
 - Charged items (bows, tridents, modded staffs) are released after a fixed 1 second charge.
 - Fabric is compiled, but it is not play-tested.
+
+## Upgrading from 0.2.0
+
+0.2.1 renamed every identifier: mod id `tradeofimmersion`, command `/toi` (was the old mod id), config
+`config/tradeofimmersion.json`, world data `<world>/data/tradeofimmersion/`, env var `TOI_API_KEY`. On first start:
+
+- the old config file and `config/<old id>/` skins folder are copied to the new names if the new ones don't exist;
+- each world's old `data/<old id>/` folder (memories, item knowledge, villager logs, body edits) is copied the same way;
+- the old API key environment variable is still read (with a warning) when `TOI_API_KEY` is not set;
+- on **NeoForge**, registry aliases map the old entity and spawn egg ids to the new ones, so companions saved by 0.2.0 load normally.
+  On **Fabric** there is no alias: companions saved by 0.2.0 are dropped when their chunk loads (re-spawn them with `/npc spawn`).
+
+Old files are copied, never deleted. See [CHANGELOG](CHANGELOG.md) for the exact old names.
 
 ## Building
 

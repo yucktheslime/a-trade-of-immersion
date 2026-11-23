@@ -7,7 +7,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = "mca-player2-bridge"
+rootProject.name = "a-trade-of-immersion"
 
 include "common"
 include "fabric"

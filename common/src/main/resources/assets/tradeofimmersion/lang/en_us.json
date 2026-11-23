@@ -1,0 +1,5 @@
+{
+  "entity.tradeofimmersion.companion": "Companion",
+  "item.tradeofimmersion.companion_spawn_egg": "Companion Spawn Egg",
+  "item.tradeofimmersion.companion_spawn_egg.desc": "Spawns an AI companion that follows you. Rename it in an anvil to pick a name."
+}

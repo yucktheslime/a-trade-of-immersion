@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "mcaplayer2",
+  "id": "tradeofimmersion",
   "version": "${version}",
   "name": "A Trade of Immersion",
   "description": "AI companions for MCA Reborn: player-like NPCs with inventories, mounts, combat, memory and item learning, powered by a local or OpenAI-compatible LLM.",
@@ -8,17 +8,17 @@
     "yucktheslime"
   ],
   "contact": {
-    "sources": "https://github.com/yucktheslime/mca-player2-bridge",
-    "issues": "https://github.com/yucktheslime/mca-player2-bridge/issues"
+    "sources": "https://github.com/yucktheslime/a-trade-of-immersion",
+    "issues": "https://github.com/yucktheslime/a-trade-of-immersion/issues"
   },
   "license": "LGPL-3.0-or-later",
   "environment": "*",
   "entrypoints": {
     "main": [
-      "dev.yucktheslime.mcaplayer2.fabric.McaPlayer2BridgeFabric"
+      "dev.yucktheslime.tradeofimmersion.fabric.TradeOfImmersionFabric"
     ],
     "client": [
-      "dev.yucktheslime.mcaplayer2.fabric.McaPlayer2BridgeFabricClient"
+      "dev.yucktheslime.tradeofimmersion.fabric.TradeOfImmersionFabricClient"
     ]
   },
   "depends": {
