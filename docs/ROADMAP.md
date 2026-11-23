@@ -36,7 +36,20 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 - Dedicated NPC chat box UI (MCA-style dialogue window) so conversations don't clutter the main chat.
 - Smarter chat filtering on top of the phase 1 filter (per-player opt-out, "is this addressed to me" model check).
 
-## Phase 3 - scale: proximity culling and the "social battery" cap
+## Phase 3 - growing up: aging and best friends
+
+- Aging for players and NPCs: child, teen and adult stages that advance over in-game days.
+- "Start as a child" choice in MCA's opening (destiny) menu.
+- Child debuffs: smaller size, less max health, weaker attacks, slower mining.
+- Each age-up removes debuffs and grants a permanent perk (extra health, faster XP, better trades),
+  so starting as a child ends up stronger than starting as an adult. Possible RPG perk tree on top.
+- Kid friendships: child NPCs remember how you treat them; some dislike you for random
+  personality reasons, and those who stick around long enough become **Best Friends**.
+- Best Friends buff: being near a best friend gives a buff (e.g. Strength or Resistance); the bond
+  carries over as both grow up.
+- NPCs (companions and MCA villagers) age with the same system.
+
+## Phase 4 - scale: proximity culling and the "social battery" cap
 
 - Proximity culling: companions far from every player go dormant (no AI turns, active memory unloaded
   to disk) and wake up when a player is back in range.
@@ -45,7 +58,7 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 - Active AI NPC cap, disguised in-world as a language barrier / social battery: NPCs beyond the cap use
   canned/vanilla MCA dialogue until a slot opens (e.g. an AI NPC dies, is dismissed or goes dormant).
 
-## Phase 4 - jobs and modpack roles
+## Phase 5 - jobs and modpack roles
 
 - Mining missions: "get me 20 iron", ore finding, tunnelling, returning with the haul.
 - Camp management: campfires, cooking, sleeping, gear repair and upkeep, restocking food.
@@ -53,7 +66,7 @@ Status legend: **done** = in the current release and tested in-game, **partial**
   use modded tools and staffs with learned item knowledge.
 - Building from simple plans; farming; trading with villagers on the owner's behalf.
 
-## Phase 5 - adaptive learning
+## Phase 6 - adaptive learning
 
 - Learn from past mistakes: summarize failed actions and bad outcomes ("the creeper blew up my boat")
   into lessons stored per NPC and retrieved when a similar situation comes up, so failures are not repeated.
