@@ -36,6 +36,10 @@ subprojects {
                 includeGroup "maven.modrinth"
             }
         }
+        maven {
+            name = "Cobblemon (ImpactDev)"
+            url = "https://maven.impactdev.net/repository/development/"
+        }
     }
 
     loom {

@@ -11,4 +11,10 @@ dependencies {
     // names are identical in the NeoForge builds (verified with javap).
     modCompileOnly "maven.modrinth:playerengine:${rootProject.playerengine_fabric_version}"
     modCompileOnly "maven.modrinth:minecraft-comes-alive-reborn:${rootProject.mca_fabric_version}"
+
+    // Compile-only: class names are the same in the NeoForge artifact. Must not be bundled.
+    // Isolated behind CobblemonHooks so the bridge still loads when Cobblemon is absent.
+    modCompileOnly "com.cobblemon:fabric:${rootProject.cobblemon_version}"
+    // Cobblemon is Kotlin; needed to compile Java subclasses of PartyStore. Not bundled.
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib:2.0.21"
 }

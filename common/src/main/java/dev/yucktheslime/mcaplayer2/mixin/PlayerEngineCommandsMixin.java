@@ -4,6 +4,7 @@ import com.player2.playerengine.PlayerEngineCommands;
 import com.player2.playerengine.PlayerEngineController;
 import dev.yucktheslime.mcaplayer2.McaPlayer2Bridge;
 import dev.yucktheslime.mcaplayer2.command.NearbyVillagersCommand;
+import dev.yucktheslime.mcaplayer2.cobblemon.CobblemonHooks;
 import dev.yucktheslime.mcaplayer2.command.TalkToVillagerCommand;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,6 +23,7 @@ public abstract class PlayerEngineCommandsMixin {
     private static void mcaplayer2$registerCommands(PlayerEngineController controller, CallbackInfo ci) {
         try {
             controller.getCommandExecutor().registerNewCommand(new TalkToVillagerCommand(), new NearbyVillagersCommand());
+            CobblemonHooks.registerCompanionCommands(controller);
         } catch (Throwable t) {
             McaPlayer2Bridge.LOGGER.error("Failed to register MCA bridge commands", t);
         }

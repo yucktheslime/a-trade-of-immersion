@@ -10,6 +10,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import dev.yucktheslime.mcaplayer2.body.CompanionBodyData;
 import dev.yucktheslime.mcaplayer2.body.CompanionBodyStore;
 import dev.yucktheslime.mcaplayer2.body.CompanionBodySync;
+import dev.yucktheslime.mcaplayer2.cobblemon.CobblemonHooks;
 import dev.yucktheslime.mcaplayer2.player2.CompanionAdapter;
 import com.player2.playerengine.player2api.AgentConversationData;
 import net.minecraft.commands.CommandSourceStack;
@@ -67,7 +68,7 @@ public final class CompanionBodyCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         var companion = Commands.argument("companion", StringArgumentType.string()).suggests(COMPANIONS);
-        dispatcher.register(Commands.literal("mcaplayer2").requires(s -> s.hasPermission(2))
+        var root = Commands.literal("mcaplayer2").requires(s -> s.hasPermission(2))
                 .then(Commands.literal("gender").then(Commands.argument("companion", StringArgumentType.string()).suggests(COMPANIONS)
                         .then(Commands.argument("gender", StringArgumentType.word())
                                 .suggests((c, b) -> SharedSuggestionProvider.suggest(List.of("male", "female", "neutral", "auto"), b))
@@ -78,7 +79,9 @@ public final class CompanionBodyCommand {
                         .then(Commands.argument("gene", StringArgumentType.word())
                                 .suggests((c, b) -> SharedSuggestionProvider.suggest(GENES.keySet(), b))
                                 .then(Commands.argument("value", FloatArgumentType.floatArg(0f, 1f))
-                                        .executes(CompanionBodyCommand::setGene))))));
+                                        .executes(CompanionBodyCommand::setGene)))));
+        CobblemonHooks.attachDebugCommands(root);
+        dispatcher.register(root);
     }
 
     private record Target(UUID id, String name) {

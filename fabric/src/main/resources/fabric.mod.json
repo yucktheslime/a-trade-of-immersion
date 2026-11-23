@@ -31,6 +31,7 @@
     "mca": ">=7.7.0"
   },
   "recommends": {
-    "player2npc": ">=1.21.1-1.4.0"
+    "player2npc": ">=1.21.1-1.4.0",
+    "cobblemon": ">=1.7.3"
   }
 }
