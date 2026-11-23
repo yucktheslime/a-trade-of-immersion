@@ -2,7 +2,7 @@
 
 A **NeoForge** (primary) and Fabric compatibility mod for **Minecraft 1.21.1** that lets **Player2 AI companions** (Player2NPC / PlayerEngine) detect, approach, and talk with **Minecraft Comes Alive (MCA) Reborn** villagers. Villagers talk back, and both sides remember past conversations.
 
-> Status: **early alpha (0.1.0)**. It compiles against the real dependency jars (local build + CI), but it has **not been play-tested in game yet**. See [Known limitations](#known-limitations).
+> Status: **early alpha (0.1.2)**. It compiles against the real dependency jars (local build + CI), but it has **not been play-tested in game yet**. See [Known limitations](#known-limitations).
 
 ## Why
 
@@ -98,8 +98,76 @@ The config is at `config/mcaplayer2.json` and is created on first launch.
 | `ownerAccessorMethods` | `[]` | No-arg methods returning a separate pet-data object that holds the owner (for mods that store ownership outside the entity) |
 | `guessOwnerFromNearestVillager` | `false` | Attribute an unresolved owner to the nearest villager, marked as a guess |
 | `mentionUnknownOwners` | `true` | Mention owned animals whose owner can't be found |
+| `companionMcaBody` | `true` | (Client, NeoForge) Render Player2 companions with MCA's body model, including the female shape and breasts. See [Companion body](#companion-body-mca-model-neoforge-client) |
+| `companionAppearance` | `player_skin` | `player_skin`: keep the companion's own Player2 skin. `mca_generated`: MCA villager look (skin, face, hair and clothes generated from genes) |
+| `companionGender` | `auto` | `auto` guesses from the Player2 character's description and greeting pronouns. `female`, `male` and `neutral` force a gender for all companions |
+| `companionGenderFallback` | `male` | Used when `auto` can't tell |
+| `companionGenderOverrides` | `{}` | Per character name, e.g. `{"Ellie": "female"}` |
+| `companionBreastSize` | `-1.0` | 0..1, or negative to use an MCA `Breast` gene seeded from the companion UUID |
+| `companionFlatWhenChestArmor` | `true` | Use the flat vanilla body while a chestplate is worn, so the breasts don't clip through armor |
+| `companionMcaBodyDisableIfModsLoaded` | `[]` | Mod ids that switch the feature off when loaded (e.g. `wildfire_gender`) |
 | `maxLogEntries` | `100` | Entries kept per villager log |
 | `historyLinesInPrompt` | `10` | Past lines injected into prompts |
+
+## Companion body (MCA model, NeoForge client)
+
+On NeoForge clients, Player2NPC companions render with **MCA Reborn's own body model** instead of the flat player model. The bridge does what MCA does for players with its villager player model (`MixinPlayerRenderer`, "PLAYER" mode): it uses `PlayerEntityExtendedModel`, which is the vanilla player geometry plus MCA's breast parts. Because it keeps the player-skin UV layout, the companion's **own Player2 skin is used automatically** and has no UV mismatch.
+
+How it works:
+- A client-only mixin targets Player2NPC's `RenderAutomaton`. It is registered in the `client` section of `mcaplayer2.neoforge.mixins.json`, so dedicated servers never load it.
+- MCA's model reads gender and genes through `CommonVillagerModel.getVillager(entity)`, which looks up `MCAClient.playerData[uuid]`. The bridge puts a client-side `VillagerEntityMCA` there for each companion UUID, holding its gender and genes.
+- Companion gender is decided in this order:
+  1. `/mcaplayer2 gender`;
+  2. `companionGenderOverrides`;
+  3. `companionGender`;
+  4. a pronoun guess from the Player2 character's description and greeting (Player2 characters have **no gender field**);
+  5. `companionGenderFallback`.
+- With `player_skin`, male and neutral companions keep the vanilla model. MCA's male body is the same shape as the vanilla one.
+- With `mca_generated`, the base skin is drawn transparent and MCA's Skin, Face, Clothing and Hair layers draw a gene-generated villager instead.
+
+### Commands (permission level 2)
+
+```
+/mcaplayer2 gender <companion> <male|female|neutral|auto>
+/mcaplayer2 body <companion>                      # show the saved overrides
+/mcaplayer2 body <companion> <trait> <0.0-1.0>
+/mcaplayer2 body <companion> reset                # clear traits (gender is kept; use "gender ... auto" to clear it)
+```
+
+- `<companion>` is a loaded companion's name, which tab-completes, or its entity UUID. Put names with spaces in quotes.
+- Values are saved per companion UUID in `<world>/data/mcaplayer2/companion_bodies.json`.
+- They are synced to every client when they change and when a player joins.
+- They override the config and the character-description guess.
+
+Traits map to MCA Reborn 7.7.36 `Genetics` genes (exact names):
+
+| Trait | MCA gene | Visible in `player_skin` | Visible in `mca_generated` |
+|---|---|---|---|
+| `breast` | `Breast` | yes (female only) | yes (female only) |
+| `size` / `height` | `Size` | yes (render scale `0.75 + Size/2`, like MCA) | yes |
+| `width` / `weight` | `Width` | yes (render scale `0.75 + Width/2`) | yes |
+| `melanin` / `skin_tone`, `hemoglobin` | `Melanin`, `Hemoglobin` | no (the Player2 skin is used) | skin color |
+| `eumelanin`, `pheomelanin` | `Eumelanin`, `Pheomelanin` | no | hair color |
+| `skin` | `Skin` | no | base skin texture |
+| `face` | `Face` | no | face texture |
+| `eye_brightness` | `EyeBrightness` | no | eyes |
+
+Height and width are only applied once you set them, so unedited companions keep Player2NPC's size. The scale is visual only; the server hitbox does not change.
+
+**MCA's own editor does not work on companions** (verified in MCA 7.7.36):
+- `/mca editor` only opens the editor for yourself (`OpenGuiRequest(VILLAGER_EDITOR, player)`).
+- `VillagerEditorSyncRequest` only applies edits to a `ServerPlayer` or a `VillagerLike` entity.
+- A Player2NPC companion (`AutomatoneEntity extends LivingEntity`) is neither, so the commands above replace the editor for companions.
+
+### Limitations
+
+- **Armor:** while a chestplate is worn, the flat vanilla body is used (`companionFlatWhenChestArmor`). MCA's breast-shaped armor model (`PlayerArmorExtendedModel`) is not applied to companions.
+- **Capes and elytra:** these stay vanilla.
+- **First person:** not relevant, since companions are only seen in third person.
+- **Breast physics:** there is none. MCA's breasts are static. Wildfire's Female Gender Mod (`wildfire_gender`) renders players only, so it neither affects nor conflicts with companions. Add it to `companionMcaBodyDisableIfModsLoaded` if you want companions left alone.
+- **MCA player-model setting:** MCA's `enableVillagerPlayerModel` and `playerRendererBlacklist` only gate MCA's player renderer. They don't affect companions; use `companionMcaBody`.
+- **Untested in game:** this has only been tested in the dev environment. The mixin applies, and the client reaches the menu without errors.
+- **Fabric:** the feature is NeoForge-only. The Fabric build has no renderer mixin, but the commands and sync are there.
 
 ## Tamed companions and owned animals
 

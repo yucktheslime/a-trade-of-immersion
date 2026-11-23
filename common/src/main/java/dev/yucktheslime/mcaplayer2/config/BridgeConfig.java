@@ -84,6 +84,24 @@ public final class BridgeConfig {
     /** Mention owned animals whose owner could not be resolved. */
     public boolean mentionUnknownOwners = true;
 
+    // ---- client-side companion body (NeoForge only) ----
+    /** Render Player2 companions with MCA Reborn's body (female shape/breasts) instead of the flat player model. */
+    public boolean companionMcaBody = true;
+    /** {@code "player_skin"}: keep the companion's own Player2 skin on MCA's player-compatible body. {@code "mca_generated"}: MCA villager look (skin, face, hair, clothes generated from genes). */
+    public String companionAppearance = "player_skin";
+    /** {@code "auto"} (guess from the Player2 character's description/greeting pronouns), {@code "female"} or {@code "male"}. */
+    public String companionGender = "auto";
+    /** Gender used when {@code auto} can't tell. */
+    public String companionGenderFallback = "male";
+    /** Per-companion gender override by character name, e.g. {"Ellie": "female"}. */
+    public java.util.Map<String, String> companionGenderOverrides = new java.util.LinkedHashMap<>();
+    /** Breast size 0..1 for female companions; negative = MCA gene, seeded from the companion's UUID. */
+    public double companionBreastSize = -1.0;
+    /** Use the flat vanilla body while a chestplate is worn (MCA's breast geometry would clip through armor). */
+    public boolean companionFlatWhenChestArmor = true;
+    /** Mod ids that, when loaded, disable the MCA companion body (e.g. a body/physics mod you want to win). Empty by default. */
+    public java.util.List<String> companionMcaBodyDisableIfModsLoaded = java.util.List.of();
+
     /** Max entries kept per villager conversation log. */
     public int maxLogEntries = 100;
     /** How many past log lines are injected into prompts. */

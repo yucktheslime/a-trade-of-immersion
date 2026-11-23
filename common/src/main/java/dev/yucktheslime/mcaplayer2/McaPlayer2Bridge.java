@@ -38,12 +38,18 @@ public final class McaPlayer2Bridge {
         PromptContextProvider.register(OwnedCompanionContextProvider.INSTANCE);
         LOGGER.info("MCA-Player2 Bridge initializing (enabled={})", BridgeConfig.get().enabled);
 
+        dev.yucktheslime.mcaplayer2.body.CompanionBodySync.init();
+        dev.architectury.event.events.common.CommandRegistrationEvent.EVENT.register(
+                (dispatcher, registry, selection) -> dev.yucktheslime.mcaplayer2.command.CompanionBodyCommand.register(dispatcher));
         LifecycleEvent.SERVER_STARTED.register(server -> {
+            dev.yucktheslime.mcaplayer2.body.CompanionBodyStore.get().load(server);
             ConversationMemoryStore.get().open(server);
             ConversationBridge.get().reset();
         });
         LifecycleEvent.SERVER_LEVEL_SAVE.register(level -> ConversationMemoryStore.get().saveDirty());
         LifecycleEvent.SERVER_STOPPING.register(server -> {
+            dev.yucktheslime.mcaplayer2.body.CompanionBodyStore.get().save();
+            dev.yucktheslime.mcaplayer2.body.CompanionBodyStore.get().unload();
             ConversationMemoryStore.get().saveDirty();
             ConversationMemoryStore.get().close();
             ConversationBridge.get().reset();

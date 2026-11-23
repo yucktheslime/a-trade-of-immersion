@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.yucktheslime.mcaplayer2.neoforge.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "client.RenderAutomatonMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

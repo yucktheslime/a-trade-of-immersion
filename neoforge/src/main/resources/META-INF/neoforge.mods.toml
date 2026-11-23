@@ -15,6 +15,10 @@ Lets Player2 AI companions (PlayerEngine) and MCA Reborn villagers talk to each 
 [[mixins]]
 config = "mcaplayer2.mixins.json"
 
+# Client-only renderer mixin (MCA body for Player2NPC companions); "client" section => never applied on dedicated servers.
+[[mixins]]
+config = "mcaplayer2.neoforge.mixins.json"
+
 [[dependencies.mcaplayer2]]
 modId = "neoforge"
 type = "required"
