@@ -1,0 +1,5 @@
+{
+  "entity.mcaplayer2.companion": "Companion",
+  "item.mcaplayer2.companion_spawn_egg": "Companion Spawn Egg",
+  "item.mcaplayer2.companion_spawn_egg.desc": "Spawns an AI companion that follows you. Rename it in an anvil to pick a name."
+}

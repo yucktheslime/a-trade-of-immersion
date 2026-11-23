@@ -10,8 +10,8 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import dev.yucktheslime.mcaplayer2.body.CompanionBodyData;
 import dev.yucktheslime.mcaplayer2.body.CompanionBodyStore;
 import dev.yucktheslime.mcaplayer2.body.CompanionBodySync;
-import dev.yucktheslime.mcaplayer2.player2.CompanionAdapter;
-import com.player2.playerengine.player2api.AgentConversationData;
+import dev.yucktheslime.mcaplayer2.entity.CompanionEntity;
+import dev.yucktheslime.mcaplayer2.entity.Companions;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -69,12 +69,12 @@ public final class CompanionBodyCommand {
     }
 
     private static final SimpleCommandExceptionType NO_COMPANION =
-            new SimpleCommandExceptionType(Component.literal("No loaded Player2 companion with that name or UUID."));
+            new SimpleCommandExceptionType(Component.literal("No loaded companion with that name or UUID."));
 
     private static final SuggestionProvider<CommandSourceStack> COMPANIONS = (ctx, b) -> {
         List<String> names = new ArrayList<>();
-        for (AgentConversationData d : CompanionAdapter.liveCompanions()) {
-            String n = CompanionAdapter.name(d);
+        for (CompanionEntity c : Companions.all(ctx.getSource().getServer())) {
+            String n = c.name();
             names.add(n.matches("[A-Za-z0-9_.+-]+") ? n : "\"" + n.replace("\"", "") + "\"");
         }
         return SharedSuggestionProvider.suggest(names, b);
@@ -104,22 +104,8 @@ public final class CompanionBodyCommand {
 
     private static Target resolve(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         String arg = StringArgumentType.getString(ctx, "companion");
-        for (AgentConversationData d : CompanionAdapter.liveCompanions()) {
-            LivingEntity e = CompanionAdapter.safeEntity(d);
-            if (e == null) continue;
-            String n = CompanionAdapter.name(d);
-            if (n.equalsIgnoreCase(arg) || e.getUUID().toString().equalsIgnoreCase(arg)) return new Target(e.getUUID(), n);
-        }
-        // Fallback: any loaded Player2NPC entity (e.g. one without an active PlayerEngine conversation).
-        for (net.minecraft.server.level.ServerLevel level : ctx.getSource().getServer().getAllLevels()) {
-            for (net.minecraft.world.entity.Entity e : level.getAllEntities()) {
-                if (!(e instanceof LivingEntity)) continue;
-                var key = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getType());
-                if (!"player2npc".equals(key.getNamespace())) continue;
-                String n = e.getName().getString();
-                if (n.equalsIgnoreCase(arg) || e.getUUID().toString().equalsIgnoreCase(arg)) return new Target(e.getUUID(), n);
-            }
-        }
+        CompanionEntity c = Companions.find(ctx.getSource().getServer(), arg, null);
+        if (c != null) return new Target(c.getUUID(), c.name());
         throw NO_COMPANION.create();
     }
 
@@ -138,6 +124,8 @@ public final class CompanionBodyCommand {
         CompanionBodyData d = CompanionBodyStore.get().getOrCreate(t.id());
         d.name = t.name();
         d.gender = g.equals("auto") ? null : g;
+        CompanionEntity ce = Companions.find(ctx.getSource().getServer(), t.id().toString(), null);
+        if (ce != null && !g.equals("auto")) ce.setGender(g);
         commit(ctx);
         ctx.getSource().sendSuccess(() -> Component.literal(t.name() + " gender: " + g), true);
         return 1;

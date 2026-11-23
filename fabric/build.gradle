@@ -27,9 +27,7 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
     modImplementation "dev.architectury:architectury-fabric:${rootProject.architectury_api_version}"
 
-    modImplementation "maven.modrinth:playerengine:${rootProject.playerengine_fabric_version}"
     modImplementation "maven.modrinth:minecraft-comes-alive-reborn:${rootProject.mca_fabric_version}"
-    modLocalRuntime "maven.modrinth:player2npc:${rootProject.player2npc_fabric_version}"
 
     common(project(path: ":common", configuration: "namedElements")) { transitive = false }
     shadowBundle project(path: ":common", configuration: "transformProductionFabric")

@@ -9,6 +9,5 @@ dependencies {
 
     // Compile against the Fabric builds (remapped to Mojang mappings by Loom). Class/package
     // names are identical in the NeoForge builds (verified with javap).
-    modCompileOnly "maven.modrinth:playerengine:${rootProject.playerengine_fabric_version}"
     modCompileOnly "maven.modrinth:minecraft-comes-alive-reborn:${rootProject.mca_fabric_version}"
 }

@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "mcaplayer2",
   "version": "${version}",
-  "name": "MCA-Player2 Bridge",
-  "description": "Lets Player2 AI companions talk to MCA villagers, lets villagers talk back, and remembers their conversations.",
+  "name": "A Trade of Immersion",
+  "description": "AI companions for MCA Reborn: player-like NPCs with inventories, mounts, combat, memory and item learning, powered by a local or OpenAI-compatible LLM.",
   "authors": [
     "yucktheslime"
   ],
@@ -16,21 +16,17 @@
   "entrypoints": {
     "main": [
       "dev.yucktheslime.mcaplayer2.fabric.McaPlayer2BridgeFabric"
+    ],
+    "client": [
+      "dev.yucktheslime.mcaplayer2.fabric.McaPlayer2BridgeFabricClient"
     ]
   },
-  "mixins": [
-    "mcaplayer2.mixins.json"
-  ],
   "depends": {
     "fabricloader": ">=0.17.2",
     "minecraft": "~1.21.1",
     "java": ">=21",
     "fabric-api": "*",
     "architectury": ">=13.0.8",
-    "playerengine": ">=1.21.1-1.4.0",
     "mca": ">=7.7.0"
-  },
-  "recommends": {
-    "player2npc": ">=1.21.1-1.4.0"
   }
 }

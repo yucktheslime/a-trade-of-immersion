@@ -26,11 +26,7 @@ dependencies {
     neoForge "net.neoforged:neoforge:${rootProject.neoforge_version}"
     modImplementation "dev.architectury:architectury-neoforge:${rootProject.architectury_api_version}"
 
-    modImplementation "maven.modrinth:playerengine:${rootProject.playerengine_neoforge_version}"
     modImplementation "maven.modrinth:minecraft-comes-alive-reborn:${rootProject.mca_neoforge_version}"
-    // Compile-only: the client renderer mixin targets Player2NPC's RenderAutomaton/AutomatoneEntity.
-    modCompileOnly "maven.modrinth:player2npc:${rootProject.player2npc_neoforge_version}"
-    modLocalRuntime "maven.modrinth:player2npc:${rootProject.player2npc_neoforge_version}"
 
     // Optional soft dependency: "MCA: Female Gender Physics" (mod id mcabp). Compile-only + dev runtime;
     // all code touching it is behind ModList checks / a mixin plugin, so it is never required.

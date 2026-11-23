@@ -1,29 +1,30 @@
 package dev.yucktheslime.mcaplayer2;
 
-import dev.yucktheslime.mcaplayer2.bridge.ConversationBridge;
-import dev.yucktheslime.mcaplayer2.config.BridgeConfig;
-import dev.yucktheslime.mcaplayer2.context.OwnedCompanionContextProvider;
-import dev.yucktheslime.mcaplayer2.context.PromptContextProvider;
-import dev.yucktheslime.mcaplayer2.goal.TalkToMcaVillagerGoal;
-import dev.yucktheslime.mcaplayer2.memory.ConversationMemoryStore;
-import dev.yucktheslime.mcaplayer2.util.McaVillagerUtil;
+import dev.architectury.event.events.common.CommandRegistrationEvent;
 import dev.architectury.event.events.common.LifecycleEvent;
 import dev.architectury.event.events.common.TickEvent;
-import net.minecraft.world.entity.LivingEntity;
+import dev.yucktheslime.mcaplayer2.ai.CompanionBrain;
+import dev.yucktheslime.mcaplayer2.body.CompanionBodyStore;
+import dev.yucktheslime.mcaplayer2.body.CompanionBodySync;
+import dev.yucktheslime.mcaplayer2.command.CompanionBodyCommand;
+import dev.yucktheslime.mcaplayer2.command.NpcCommand;
+import dev.yucktheslime.mcaplayer2.config.BridgeConfig;
+import dev.yucktheslime.mcaplayer2.memory.ConversationMemoryStore;
+import dev.yucktheslime.mcaplayer2.memory.ItemKnowledgeStore;
+import dev.yucktheslime.mcaplayer2.memory.NpcMemoryStore;
+import dev.yucktheslime.mcaplayer2.registry.ModRegistry;
+import dev.yucktheslime.mcaplayer2.world.WorldEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Loader-agnostic entry point; called from {@code neoforge.McaPlayer2BridgeNeoForge} and
- * {@code fabric.McaPlayer2BridgeFabric}. Events go through Architectury API so they work on both loaders.
+ * A Trade of Immersion - loader-agnostic entry point (called from the NeoForge and Fabric entry classes).
  *
  * <ul>
- *   <li>PlayerEngine side: {@code mixin.PlayerEngineCommandsMixin} registers the LLM-callable
- *       {@code talk_to_villager} / {@code nearby_villagers} commands on every companion, and
- *       {@code mixin.PlayerEngineConversationManagerMixin} captures every line a companion speaks.</li>
- *   <li>MCA side: a server-tick listener ({@link ConversationBridge#onServerTick}) lets villagers notice
- *       companions in range and greet / answer them through MCA's villager chat.</li>
- *   <li>Memory: {@link ConversationMemoryStore} keeps a JSON log per villager in the world save.</li>
+ *   <li>{@code entity.CompanionEntity}: the companion itself (inventory, riding, combat, item use).</li>
+ *   <li>{@code ai.CompanionBrain}: the AI loop (OpenAI-compatible / Kagrenac / mock backends).</li>
+ *   <li>{@code world.WorldEvents}: chat, deaths and attacks become memories and turns.</li>
+ *   <li>{@code villager.VillagerTalk}: companions talk with MCA villagers through the same backend.</li>
  * </ul>
  */
 public final class McaPlayer2Bridge {
@@ -35,35 +36,35 @@ public final class McaPlayer2Bridge {
 
     public static void init() {
         BridgeConfig.load();
-        PromptContextProvider.register(OwnedCompanionContextProvider.INSTANCE);
-        LOGGER.info("MCA-Player2 Bridge initializing (enabled={})", BridgeConfig.get().enabled);
-
-        dev.yucktheslime.mcaplayer2.body.CompanionBodySync.init();
-        dev.architectury.event.events.common.CommandRegistrationEvent.EVENT.register(
-                (dispatcher, registry, selection) -> dev.yucktheslime.mcaplayer2.command.CompanionBodyCommand.register(dispatcher));
-        LifecycleEvent.SERVER_STARTED.register(server -> {
-            dev.yucktheslime.mcaplayer2.body.CompanionBodyStore.get().load(server);
-            ConversationMemoryStore.get().open(server);
-            ConversationBridge.get().reset();
+        LOGGER.info("A Trade of Immersion initializing (enabled={}, backend={})", BridgeConfig.get().enabled, BridgeConfig.get().aiBackend);
+        ModRegistry.init();
+        CompanionBodySync.init();
+        WorldEvents.init();
+        CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
+            CompanionBodyCommand.register(dispatcher);
+            NpcCommand.register(dispatcher);
         });
-        LifecycleEvent.SERVER_LEVEL_SAVE.register(level -> ConversationMemoryStore.get().saveDirty());
+        LifecycleEvent.SERVER_STARTED.register(server -> {
+            CompanionBodyStore.get().load(server);
+            ConversationMemoryStore.get().open(server);
+            NpcMemoryStore.get().open(server);
+            ItemKnowledgeStore.get().open(server);
+            CompanionBrain.start(server);
+        });
+        LifecycleEvent.SERVER_LEVEL_SAVE.register(level -> {
+            ConversationMemoryStore.get().saveDirty();
+            NpcMemoryStore.get().saveDirty();
+            ItemKnowledgeStore.get().save();
+        });
         LifecycleEvent.SERVER_STOPPING.register(server -> {
-            dev.yucktheslime.mcaplayer2.body.CompanionBodyStore.get().save();
-            dev.yucktheslime.mcaplayer2.body.CompanionBodyStore.get().unload();
+            CompanionBrain.stop();
+            CompanionBodyStore.get().save();
+            CompanionBodyStore.get().unload();
             ConversationMemoryStore.get().saveDirty();
             ConversationMemoryStore.get().close();
-            ConversationBridge.get().reset();
+            NpcMemoryStore.get().close();
+            ItemKnowledgeStore.get().close();
         });
-        TickEvent.SERVER_POST.register(server -> ConversationBridge.get().onServerTick(server));
-    }
-
-    /**
-     * Helper from the original scaffold: build a talk goal for the nearest MCA villager. Run it with
-     * {@code controller.runUserTask(goal)} on the companion's {@code PlayerEngineController}.
-     */
-    public static TalkToMcaVillagerGoal createTalkGoal(LivingEntity companion, double searchRadius) {
-        return McaVillagerUtil.findNearestMcaVillager(companion, searchRadius)
-                .map(villager -> new TalkToMcaVillagerGoal(companion, villager))
-                .orElse(null);
+        TickEvent.SERVER_POST.register(CompanionBrain::tick);
     }
 }

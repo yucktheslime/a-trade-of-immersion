@@ -31,7 +31,7 @@ jobs:
       - name: Upload NeoForge jar
         uses: actions/upload-artifact@v4
         with:
-          name: mca-player2-bridge-neoforge-1.21.1
+          name: a-trade-of-immersion-neoforge-1.21.1
           path: |
             neoforge/build/libs/*.jar
             !neoforge/build/libs/*-dev-shadow.jar
@@ -41,7 +41,7 @@ jobs:
       - name: Upload Fabric jar
         uses: actions/upload-artifact@v4
         with:
-          name: mca-player2-bridge-fabric-1.21.1
+          name: a-trade-of-immersion-fabric-1.21.1
           path: |
             fabric/build/libs/*.jar
             !fabric/build/libs/*-dev-shadow.jar

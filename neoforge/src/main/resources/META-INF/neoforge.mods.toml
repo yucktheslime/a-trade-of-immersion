@@ -6,18 +6,11 @@ issueTrackerURL = "https://github.com/yucktheslime/mca-player2-bridge/issues"
 [[mods]]
 modId = "mcaplayer2"
 version = "${version}"
-displayName = "MCA-Player2 Bridge"
+displayName = "A Trade of Immersion"
 authors = "yucktheslime"
 description = '''
-Lets Player2 AI companions (PlayerEngine) and MCA Reborn villagers talk to each other, with per-villager conversation memory.
+AI companions for MCA Reborn: a player-like NPC with a real inventory that uses any mod's items, rides horses, boats and modded mounts, fights, remembers what happens around it, learns items and talks with MCA villagers. Runs on a free local LLM (Ollama) or any OpenAI-compatible API (OpenRouter), or a Kagrenac server.
 '''
-
-[[mixins]]
-config = "mcaplayer2.mixins.json"
-
-# Client-only renderer mixin (MCA body for Player2NPC companions); "client" section => never applied on dedicated servers.
-[[mixins]]
-config = "mcaplayer2.neoforge.mixins.json"
 
 # Optional client compat with "MCA: Female Gender Physics" (mcabp); a mixin plugin skips it when that mod is absent.
 [[mixins]]
@@ -45,24 +38,10 @@ ordering = "AFTER"
 side = "BOTH"
 
 [[dependencies.mcaplayer2]]
-modId = "playerengine"
-type = "required"
-versionRange = "[1.21.1-1.4.0,)"
-ordering = "AFTER"
-side = "BOTH"
-
-[[dependencies.mcaplayer2]]
 modId = "mca"
 type = "required"
 versionRange = "[7.7,)"
 ordering = "AFTER"
-side = "BOTH"
-
-[[dependencies.mcaplayer2]]
-modId = "player2npc"
-type = "optional"
-versionRange = "[1.21.1-1.4.0,)"
-ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.mcaplayer2]]
