@@ -61,11 +61,12 @@ public final class NpcCommand {
                                         .executes(c -> spawn(c, StringArgumentType.getString(c, "name"), StringArgumentType.getString(c, "gender"),
                                                 StringArgumentType.getString(c, "skin")))))));
         root.then(Commands.literal("list").executes(NpcCommand::list));
-        root.then(Commands.literal("ai").then(Commands.literal("status").executes(NpcCommand::aiStatus))
+        root.then(Commands.literal("ai").then(Commands.literal("status")
+                        .requires(s -> s.hasPermission(2) || ToiConfig.get().statusForEveryone).executes(NpcCommand::aiStatus))
                 .then(Commands.literal("reload").requires(s -> s.hasPermission(2)).executes(c -> {
                     ToiConfig.load();
                     CompanionBrain.reload();
-                    c.getSource().sendSuccess(() -> Component.literal("Reloaded config. " + CompanionBrain.status()), true);
+                    c.getSource().sendSuccess(() -> Component.literal("Reloaded config. " + CompanionBrain.status()), dev.yucktheslime.tradeofimmersion.config.ToiConfig.get().chatOpFeedback);
                     return 1;
                 }))
                 .then(Commands.literal("preset").requires(s -> s.hasPermission(2))
@@ -167,7 +168,7 @@ public final class NpcCommand {
             }
             n.say("Goodbye!");
             n.discard();
-            c.getSource().sendSuccess(() -> Component.literal(n.name() + " left (items dropped)."), true);
+            c.getSource().sendSuccess(() -> Component.literal(n.name() + " left (items dropped)."), dev.yucktheslime.tradeofimmersion.config.ToiConfig.get().chatOpFeedback);
             return 1;
         })));
         d.register(root);
@@ -204,7 +205,7 @@ public final class NpcCommand {
         CompanionEntity n = Companions.spawn(c.getSource().getLevel(), c.getSource().getPosition(), p, name, gender, skin);
         n.say("Hello" + (p != null ? " " + p.getGameProfile().getName() : "") + "! I'm " + n.name() + ".");
         c.getSource().sendSuccess(() -> Component.literal("Spawned " + n.name() + " (" + n.getGender() + ")" + (p != null ? ", owned by " + p.getGameProfile().getName() : "")
-                + ". Talk in chat near them, shift-right-click for their inventory."), true);
+                + ". Talk in chat near them, shift-right-click for their inventory."), dev.yucktheslime.tradeofimmersion.config.ToiConfig.get().chatOpFeedback);
         return 1;
     }
 
@@ -223,8 +224,8 @@ public final class NpcCommand {
             var srv = c.getSource().getServer();
             String token = ToiConfig.get().effectiveKagrenacToken().isBlank() ? "NOT SET (kagrenacToken or env TOI_KAGRENAC_TOKEN)" : "set";
             k.refreshHealth().whenComplete((info, err) -> srv.execute(() -> c.getSource().sendSuccess(() ->
-                    Component.literal("Kagrenac " + ToiConfig.get().kagrenacBaseUrl + ": " + info + "; token " + token
-                            + "; session " + KagrenacBackend.session() + "; voice " + (ToiConfig.get().voiceEnabled ? "on" : "off")), false)));
+                    Component.literal("Kagrenac " + KagrenacBackend.safeUrl(ToiConfig.get().kagrenacBaseUrl) + (KagrenacBackend.remote() ? " (remote)" : "") + ": " + info + "; token " + token
+                            + "; session " + KagrenacBackend.session() + "; voice " + (ToiConfig.get().voiceEnabled ? "on (" + dev.yucktheslime.tradeofimmersion.voice.VoiceSync.status() + ")" : "off")), false)));
         }
         return 1;
     }
@@ -250,7 +251,7 @@ public final class NpcCommand {
         ToiConfig.save();
         CompanionBrain.reload();
         c.getSource().sendSuccess(() -> Component.literal("AI preset " + p + " saved. " + CompanionBrain.status()
-                + (p.equals("kagrenac") ? "\nRun /npc ai status to check the server." : "")), true);
+                + (p.equals("kagrenac") ? "\nRun /npc ai status to check the server." : "")), dev.yucktheslime.tradeofimmersion.config.ToiConfig.get().chatOpFeedback);
         return 1;
     }
 }

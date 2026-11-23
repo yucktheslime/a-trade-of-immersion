@@ -199,13 +199,16 @@ public class CompanionEntity extends PathfinderMob {
 
     // ---------------------------------------------------------------- speaking
 
-    /** Says a line out loud to players within 48 blocks and remembers it. */
+    /** Says a line out loud to players within npcChatRadius (and its owner within npcChatOwnerRadius) and remembers it. */
     public void say(String text) {
         if (text == null || text.isBlank() || !(level() instanceof ServerLevel sl)) return;
         String line = text.length() > 400 ? text.substring(0, 400) + "..." : text;
         Component msg = Component.literal("<" + name() + "> ").withStyle(s -> s.withColor(0x7FD4FF)).append(Component.literal(line).withStyle(s -> s.withColor(0xFFFFFF)));
+        var cfg = dev.yucktheslime.tradeofimmersion.config.ToiConfig.get();
+        double r = Math.max(1, cfg.npcChatRadius), ro = Math.max(r, cfg.npcChatOwnerRadius);
         for (ServerPlayer p : sl.players()) {
-            if (p.distanceToSqr(this) < 48 * 48) p.sendSystemMessage(msg);
+            double d = p.distanceToSqr(this);
+            if (d < r * r || isOwner(p) && d < ro * ro) p.sendSystemMessage(msg);
         }
         NpcMemoryStore.get().chat(getUUID(), name(), line);
     }
@@ -390,7 +393,7 @@ public class CompanionEntity extends PathfinderMob {
     public void die(DamageSource source) {
         if (!level().isClientSide) {
             Player owner = getOwner();
-            if (owner instanceof ServerPlayer sp) sp.sendSystemMessage(Component.literal(name() + " died: ").append(source.getLocalizedDeathMessage(this)));
+            if (owner instanceof ServerPlayer sp && dev.yucktheslime.tradeofimmersion.config.ToiConfig.get().chatCompanionDeathNotice) sp.sendSystemMessage(Component.literal(name() + " died: ").append(source.getLocalizedDeathMessage(this)));
             CompanionBrain.onCompanionGone(this);
         }
         super.die(source);

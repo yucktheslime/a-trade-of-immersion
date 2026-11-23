@@ -54,15 +54,24 @@ public final class KagrenacWorld {
      * this world sees it in its recent events). Rate limited; never makes a model call.
      */
     public static void event(String type, CompanionEntity about, String text) {
+        event(type, about, text, null);
+    }
+
+    /** Same, with extra context (location, killer...). Queued and sent in the background (KagrenacOutbox). */
+    public static void event(String type, CompanionEntity about, String text, Map<String, String> extra) {
         KagrenacBackend k = kagrenac();
         if (k == null || !ToiConfig.get().kagrenacLogEvents || text == null || text.isBlank()) return;
         synchronized (EVENT_TIMES) {
             long now = System.currentTimeMillis();
             while (!EVENT_TIMES.isEmpty() && now - EVENT_TIMES.peekFirst() > 60_000) EVENT_TIMES.pollFirst();
-            if (EVENT_TIMES.size() >= MAX_EVENTS_PER_MINUTE) return;
+            if (EVENT_TIMES.size() >= MAX_EVENTS_PER_MINUTE) {
+                dev.yucktheslime.tradeofimmersion.util.QuietLog.warn("kagrenac-event-rate", "More than {} world events in a minute; extra ones are not sent to Kagrenac", MAX_EVENTS_PER_MINUTE);
+                return;
+            }
             EVENT_TIMES.addLast(now);
         }
         Map<String, String> ctx = new java.util.LinkedHashMap<>();
+        if (extra != null) ctx.putAll(extra);
         if (about != null) {
             ctx.put("location", about.blockPosition().toShortString() + " (" + about.level().dimension().location().getPath() + ")");
             k.logEvent(type, KagrenacBackend.companionId(about.getUUID().toString()), about.name(), text, ctx);
@@ -78,7 +87,7 @@ public final class KagrenacWorld {
         KagrenacBackend k = kagrenac();
         if (k == null || !ToiConfig.get().kagrenacSyncBios) return;
         if (server.getTickCount() % (BIO_INTERVAL_TICKS * 10) == 7) k.refreshHealth(); // notice a server that came up later
-        if (!k.has("bio_sync")) return;
+        if (!k.has("bio_sync") || k.outbox.offline()) return; // unreachable: the event retries find out when it is back
         try {
             syncBios(server, k);
         } catch (Exception e) {
@@ -109,12 +118,12 @@ public final class KagrenacWorld {
         if (!changed.isEmpty()) {
             k.syncBios(changed).whenComplete((v, err) -> {
                 if (err != null) {
-                    TradeOfImmersion.LOGGER.warn("Kagrenac bio sync failed: {}", (err.getCause() != null ? err.getCause() : err).getMessage());
+                    dev.yucktheslime.tradeofimmersion.util.QuietLog.warn("kagrenac-bios", "Kagrenac bio sync failed: {}", (err.getCause() != null ? err.getCause() : err).getMessage());
                     synchronized (PUSHED) {
                         changed.forEach(b -> PUSHED.remove(b.id())); // try again next time
                     }
                 } else {
-                    TradeOfImmersion.LOGGER.info("Kagrenac: pushed {} NPC bio(s) to the dashboard", changed.size());
+                    TradeOfImmersion.LOGGER.debug("Kagrenac: pushed {} NPC bio(s) to the dashboard", changed.size());
                 }
             });
         }

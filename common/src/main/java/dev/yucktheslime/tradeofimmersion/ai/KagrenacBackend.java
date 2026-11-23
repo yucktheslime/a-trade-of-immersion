@@ -32,7 +32,8 @@ import java.util.regex.Pattern;
  *
  * <p>With the A Trade of Immersion server ({@code minecraft_actions} in health capabilities) all thirteen
  * Minecraft actions and the extra event types are used; against a plain Kagrenac template only its three
- * built-in actions and four event types are. Never retries a request (PROTOCOL.md).
+ * built-in actions and four event types are. Turns are never retried (PROTOCOL.md); log-only world events wait in
+ * {@link KagrenacOutbox} and are sent again, each attempt with a new request id, while Kagrenac is unreachable.
  */
 public final class KagrenacBackend implements AiBackend {
     /** Protocol action names, in the order they are offered. */
@@ -51,16 +52,78 @@ public final class KagrenacBackend implements AiBackend {
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private volatile Set<String> capabilities = Set.of();
     private volatile String serverInfo = "not checked yet";
+    /** The last health.php answered with ok true. */
+    private volatile boolean healthy;
+    /** World events waiting to be sent (event.php); keeps them while Kagrenac is unreachable. */
+    final KagrenacOutbox outbox = new KagrenacOutbox(this);
     /** request id currently awaited per npc id; replies for anything else are dropped (stale). */
     private final Map<String, String> awaited = new java.util.concurrent.ConcurrentHashMap<>();
 
     public KagrenacBackend() {
+        securityCheck();
         refreshHealth();
+    }
+
+    // ------------------------------------------------------------------ remote mode
+
+    /** True when the URL points at this machine or a private/local network (LAN, WSL, Tailscale tailnet). */
+    public static boolean isLocalUrl(String url) {
+        try {
+            String host = URI.create(url.trim()).getHost();
+            if (host == null) return false;
+            host = host.toLowerCase(Locale.ROOT);
+            if (host.equals("localhost") || host.endsWith(".local") || host.endsWith(".lan") || host.endsWith(".internal")) return true;
+            if (!host.matches("[0-9.]+|\\[?[0-9a-f:]+]?")) return false; // a public DNS name (tunnel, domain)
+            java.net.InetAddress a = java.net.InetAddress.getByName(host); // a literal: no DNS lookup
+            if (a.isLoopbackAddress() || a.isSiteLocalAddress() || a.isLinkLocalAddress() || a.isAnyLocalAddress()) return true;
+            byte[] b = a.getAddress();
+            return b.length == 4 && (b[0] & 0xFF) == 100 && (b[1] & 0xC0) == 64; // 100.64.0.0/10 (Tailscale)
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Remote mode: a URL outside this machine and the local network. */
+    public static boolean remote() {
+        return !isLocalUrl(ToiConfig.get().kagrenacBaseUrl);
+    }
+
+    /** Logged once per (re)load. Never prints the token. */
+    private static void securityCheck() {
+        String url = ToiConfig.get().kagrenacBaseUrl == null ? "" : ToiConfig.get().kagrenacBaseUrl.trim();
+        if (!remote()) return;
+        if (ToiConfig.get().effectiveKagrenacToken().isBlank()) {
+            TradeOfImmersion.LOGGER.warn("Kagrenac URL {} is not local: a token is required (kagrenacToken or env TOI_KAGRENAC_TOKEN). Nothing is sent until one is set.", safeUrl(url));
+        }
+        if (url.toLowerCase(Locale.ROOT).startsWith("http:")) {
+            TradeOfImmersion.LOGGER.warn("Kagrenac URL {} uses plain http over the internet: the token and conversations travel unencrypted. Use an https tunnel (Cloudflare Tunnel, Tailscale Funnel).", safeUrl(url));
+        }
+    }
+
+    /** The URL without any user:password part, for logs and status. */
+    public static String safeUrl(String url) {
+        try {
+            URI u = URI.create(url.trim());
+            return u.getUserInfo() == null ? url.trim() : new URI(u.getScheme(), null, u.getHost(), u.getPort(), u.getPath(), null, null).toString();
+        } catch (Exception e) {
+            return "(invalid URL)";
+        }
+    }
+
+    public boolean healthy() {
+        return healthy;
+    }
+
+    /** Thrown instead of sending anything to a remote URL without a token. */
+    public static final class TokenRequiredException extends IllegalStateException {
+        TokenRequiredException() {
+            super("a token is required for a remote Kagrenac URL");
+        }
     }
 
     @Override
     public String name() {
-        return "kagrenac(" + ToiConfig.get().kagrenacBaseUrl + ")";
+        return "kagrenac(" + safeUrl(ToiConfig.get().kagrenacBaseUrl) + (remote() ? ", remote" : "") + ")";
     }
 
     // ------------------------------------------------------------------ helpers
@@ -367,8 +430,17 @@ public final class KagrenacBackend implements AiBackend {
 
     /** A log-only game event (event.php, respond false). Unknown types for this server are dropped. */
     public void logEvent(String type, String npcId, String npcName, String text, Map<String, String> ctx) {
-        if (!has("game_event")) return;
-        if (!TEMPLATE_EVENTS.contains(type) && !(MINECRAFT_EVENTS.contains(type) && has("minecraft_events"))) return;
+        outbox.add(type, npcId, npcName, text, ctx);
+    }
+
+    /** Whether this server takes this log-only event type (known only after a health check). */
+    boolean acceptsEvent(String type) {
+        if (!has("game_event")) return false;
+        return TEMPLATE_EVENTS.contains(type) || MINECRAFT_EVENTS.contains(type) && has("minecraft_events");
+    }
+
+    /** Sends one queued event; the outbox handles failures and retries. */
+    CompletableFuture<JsonObject> sendEvent(String type, String npcId, String npcName, String text, Map<String, String> ctx) {
         JsonObject b = new JsonObject();
         b.addProperty("protocol", 1);
         b.addProperty("request_id", newRequestId("ev"));
@@ -383,10 +455,7 @@ public final class KagrenacBackend implements AiBackend {
         b.addProperty("text", cut(text, 300));
         if (ctx != null && !ctx.isEmpty()) b.add("context", context(ctx));
         b.addProperty("respond", false);
-        post("event.php", b).exceptionally(err -> {
-            TradeOfImmersion.LOGGER.debug("Kagrenac event failed: {}", err.toString());
-            return null;
-        });
+        return post("event.php", b);
     }
 
     public record Bio(String id, String name, String role, String bio) {
@@ -443,7 +512,7 @@ public final class KagrenacBackend implements AiBackend {
         });
     }
 
-    /** speak.php: WAV bytes for a line (client side). */
+    /** speak.php: WAV bytes for a line (fetched by the Minecraft server, then streamed to nearby players). */
     public CompletableFuture<byte[]> speak(String text, String npcId, String parentRequestId, String voiceHint) {
         JsonObject b = new JsonObject();
         b.addProperty("protocol", 1);
@@ -452,7 +521,12 @@ public final class KagrenacBackend implements AiBackend {
         if (npcId != null && !npcId.isBlank()) b.addProperty("npc_id", safeId(npcId));
         if (voiceHint != null && voiceHint.matches("[a-z_]{1,16}")) b.addProperty("voice_hint", voiceHint);
         b.addProperty("text", cut(text, 1000));
-        HttpRequest.Builder rb = request("speak.php", Math.max(10, ToiConfig.get().aiTimeoutSeconds)).POST(HttpRequest.BodyPublishers.ofString(b.toString()));
+        HttpRequest.Builder rb;
+        try {
+            rb = request("speak.php", Math.max(10, ToiConfig.get().aiTimeoutSeconds)).POST(HttpRequest.BodyPublishers.ofString(b.toString()));
+        } catch (RuntimeException e) {
+            return CompletableFuture.failedFuture(e);
+        }
         return http.sendAsync(rb.build(), HttpResponse.BodyHandlers.ofByteArray()).thenApply(resp -> {
             byte[] wav = resp.body();
             if (resp.statusCode() != 200) {
@@ -475,9 +549,17 @@ public final class KagrenacBackend implements AiBackend {
 
     /** GET health.php (no token) and remember the server's capabilities. */
     public CompletableFuture<String> refreshHealth() {
-        HttpRequest r = HttpRequest.newBuilder(URI.create(url("health.php"))).timeout(Duration.ofSeconds(5)).GET().build();
+        HttpRequest r;
+        try {
+            r = HttpRequest.newBuilder(URI.create(url("health.php"))).timeout(Duration.ofSeconds(5)).GET().build();
+        } catch (RuntimeException e) {
+            healthy = false;
+            serverInfo = "bad kagrenacBaseUrl";
+            return CompletableFuture.completedFuture(serverInfo);
+        }
         return http.sendAsync(r, HttpResponse.BodyHandlers.ofString()).handle((resp, err) -> {
             if (err != null) {
+                healthy = false;
                 serverInfo = "unreachable (" + (err.getCause() != null ? err.getCause() : err).getClass().getSimpleName() + ")";
                 return serverInfo;
             }
@@ -487,11 +569,13 @@ public final class KagrenacBackend implements AiBackend {
                 if (o.get("capabilities") instanceof JsonArray arr) arr.forEach(e -> caps.add(e.getAsString()));
                 capabilities = Set.copyOf(caps);
                 boolean ok = o.has("ok") && o.get("ok").getAsBoolean();
+                healthy = ok;
                 serverInfo = (ok ? "ready" : "not ready (" + (o.has("error") ? o.getAsJsonObject("error").get("code").getAsString() : "HTTP " + resp.statusCode()) + ")")
                         + ", server " + (o.has("server_version") ? o.get("server_version").getAsString() : "?")
                         + ", schema " + (o.has("schema") ? o.get("schema").getAsString() : "?")
                         + (minecraftServer() ? ", Minecraft actions (" + offeredActions().size() + " offered)" : ", template actions only (install kagrenac-server/ for all actions)");
             } catch (Exception e) {
+                healthy = false;
                 serverInfo = "HTTP " + resp.statusCode() + " (not a Kagrenac server?)";
             }
             return serverInfo;
@@ -507,13 +591,18 @@ public final class KagrenacBackend implements AiBackend {
                 .timeout(Duration.ofSeconds(timeoutSeconds))
                 .header("Content-Type", "application/json");
         String token = ToiConfig.get().effectiveKagrenacToken();
+        if (token.isBlank() && remote()) throw new TokenRequiredException();
         if (!token.isBlank()) rb.header("Authorization", "Bearer " + token);
         return rb;
     }
 
     private CompletableFuture<JsonObject> post(String endpoint, JsonObject body) {
-        HttpRequest.Builder rb = request(endpoint, Math.max(5, ToiConfig.get().aiTimeoutSeconds))
-                .POST(HttpRequest.BodyPublishers.ofString(body.toString()));
+        HttpRequest.Builder rb;
+        try {
+            rb = request(endpoint, Math.max(5, ToiConfig.get().aiTimeoutSeconds)).POST(HttpRequest.BodyPublishers.ofString(body.toString()));
+        } catch (RuntimeException e) {
+            return CompletableFuture.failedFuture(e);
+        }
         return http.sendAsync(rb.build(), HttpResponse.BodyHandlers.ofString()).thenApply(resp -> {
             JsonObject o;
             try {

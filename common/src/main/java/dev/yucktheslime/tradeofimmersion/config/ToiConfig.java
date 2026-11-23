@@ -54,11 +54,17 @@ public final class ToiConfig {
     public double aiMinSecondsBetweenTurns = 2.0;
 
     // ---- Kagrenac (aiBackend "kagrenac", see docs/KAGRENAC_SETUP.md) ----
-    /** Kagrenac server base URL: the kagrenac-server/ folder of this repo installed in DwemerDistro. */
+    /**
+     * Kagrenac server base URL: the kagrenac-server/ folder of this repo installed in DwemerDistro. Any http(s) URL
+     * works, so a hosted Minecraft server (BisectHosting, Apex, ...) can reach Kagrenac on your PC through an https
+     * tunnel, e.g. "https://name.trycloudflare.com/custom-mods/TradeOfImmersionServer". A URL that is not on this
+     * machine or your local network needs a token.
+     */
     public String kagrenacBaseUrl = "http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer";
     /**
-     * Kagrenac bearer token (the "token" in the server's config/config.php; it only unlocks your own local server).
-     * Leave empty to read the environment variable TOI_KAGRENAC_TOKEN (or KAGRENAC_TOKEN).
+     * Kagrenac bearer token (the "token" in the server's config/config.php). Settable here for hosts that have no
+     * environment variables; the environment variable TOI_KAGRENAC_TOKEN (or KAGRENAC_TOKEN) overrides it when set.
+     * Never logged or shown in chat.
      */
     public String kagrenacToken = "";
     /** Kagrenac session id (history and memory are kept per session + NPC). Empty = "mc-" + world name. */
@@ -79,16 +85,49 @@ public final class ToiConfig {
     public boolean kagrenacUseDecision = true;
     /** A new line to a companion that is still thinking cancels the old turn (cancel.php) instead of waiting. */
     public boolean kagrenacCancelOnInterrupt = true;
+    /**
+     * What companions do while Kagrenac is unreachable (PC off, tunnel down): {@code "line"} = one short in-character
+     * line now and then, otherwise quiet; {@code "openai"} = answer through the OpenAI-compatible settings above
+     * (aiPreset/aiBaseUrl/aiModel/aiApiKey, e.g. OpenRouter); {@code "mock"} = the offline keyword brain;
+     * {@code "none"} = silent.
+     */
+    public String kagrenacFallback = "line";
+    /** World events waiting for Kagrenac (kept in memory while it is unreachable; the oldest are dropped beyond this). */
+    public int kagrenacEventQueueSize = 200;
+    /** Longest wait between two retries while Kagrenac is unreachable (the wait doubles from 2 s up to this). */
+    public int kagrenacRetryMaxSeconds = 300;
+    /** Also forward kills of ordinary hostile mobs by players (companion kills, bosses and named mobs are always sent). */
+    public boolean kagrenacLogMobKills = false;
 
-    // ---- voice (client side; Kagrenac speak.php) ----
-    /** Play NPC replies as speech from the NPC's position (needs a Kagrenac server with TTS enabled). Off by default. */
+    // ---- voice (Kagrenac speak.php) ----
+    /**
+     * Server side: fetch NPC speech from Kagrenac's speak.php (through kagrenacBaseUrl, with the server's token) and
+     * stream it to nearby players, who hear it from the NPC's position. Needs TTS enabled on the Kagrenac server.
+     * Off by default. Players need nothing but the mod (no token, no URL).
+     */
     public boolean voiceEnabled = false;
+    /** Client side: play NPC voice the server streams (set false to mute it on this computer). */
+    public boolean voicePlay = true;
     /** Also speak MCA villager lines. */
     public boolean voiceVillagers = true;
     /** Voice volume 0..1 (also scaled by the "Voice/Speech" volume slider). */
     public float voiceVolume = 1.0f;
     /** Voice is heard up to this many blocks from the NPC. */
     public int voiceRange = 24;
+
+    // ---- chat (keep players' screens clean) ----
+    /** NPC lines are shown to players within this many blocks of the NPC. */
+    public double npcChatRadius = 24.0;
+    /** ... and to the companion's owner within this many blocks (same dimension). */
+    public double npcChatOwnerRadius = 64.0;
+    /** Show "(I can't think straight: AI backend unreachable)" lines in chat when the AI fails. Off: failures only go to the log and /npc ai status. */
+    public boolean chatShowAiErrors = false;
+    /** Tell a companion's owner in chat when it dies. */
+    public boolean chatCompanionDeathNotice = true;
+    /** Also show /npc command results to other ops (vanilla "[Name: ...]" broadcast). Off: only whoever ran the command sees them. */
+    public boolean chatOpFeedback = false;
+    /** Let non-op players run /npc ai status (backend, errors, queue). Off: ops only. */
+    public boolean statusForEveryone = false;
 
     // ---- companions ----
     /** Players within this many blocks of a companion are heard by it. */
@@ -167,8 +206,8 @@ public final class ToiConfig {
         return "openrouter".equalsIgnoreCase(aiPreset) ? "google/gemma-3-27b-it:free" : "gemma3:4b";
     }
 
+    /** The API key: the environment variable TOI_API_KEY (or OPENROUTER_API_KEY) when set, else aiApiKey. */
     public String effectiveApiKey() {
-        if (aiApiKey != null && !aiApiKey.isBlank()) return aiApiKey;
         String env = System.getenv("TOI_API_KEY");
         if (env == null || env.isBlank()) {
             env = System.getenv(Migration.LEGACY_ENV_KEY);
@@ -178,14 +217,16 @@ public final class ToiConfig {
             }
         }
         if (env == null || env.isBlank()) env = System.getenv("OPENROUTER_API_KEY");
-        return env == null ? "" : env;
+        if (env != null && !env.isBlank()) return env.trim();
+        return aiApiKey == null ? "" : aiApiKey.trim();
     }
 
+    /** The Kagrenac token: the environment variable TOI_KAGRENAC_TOKEN (or KAGRENAC_TOKEN) when set, else kagrenacToken. */
     public String effectiveKagrenacToken() {
-        if (kagrenacToken != null && !kagrenacToken.isBlank()) return kagrenacToken;
         String env = System.getenv("TOI_KAGRENAC_TOKEN");
         if (env == null || env.isBlank()) env = System.getenv("KAGRENAC_TOKEN");
-        return env == null ? "" : env;
+        if (env != null && !env.isBlank()) return env.trim();
+        return kagrenacToken == null ? "" : kagrenacToken.trim();
     }
 
     private static transient boolean warnedLegacyEnv;

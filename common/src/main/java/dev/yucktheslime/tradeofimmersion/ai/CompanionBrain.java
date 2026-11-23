@@ -54,13 +54,47 @@ public final class CompanionBrain {
 
     public static void reload() {
         String b = ToiConfig.get().aiBackend.toLowerCase(Locale.ROOT).trim();
+        AiBackend old = backend;
         backend = switch (b) {
             case "mock", "offline" -> MOCK;
             case "kagrenac" -> new KagrenacBackend();
             default -> new OpenAiBackend();
         };
+        // world events still waiting for Kagrenac move to the new backend (or are dropped if it is not Kagrenac)
+        if (old instanceof KagrenacBackend k) k.outbox.closeInto(backend instanceof KagrenacBackend nk ? nk.outbox : null);
+        fallbackBackend = null;
         failureUntil = 0;
         TradeOfImmersion.LOGGER.info("AI backend: {}", backend.name());
+    }
+
+    private static AiBackend fallbackBackend;
+
+    /**
+     * What answers while the configured backend is failing: for Kagrenac, {@code kagrenacFallback} (a short line,
+     * OpenAI-compatible/OpenRouter, mock or nothing); for the others the mock when {@code aiFallbackToMock}.
+     * Null = stay silent.
+     */
+    static AiBackend fallback() {
+        ToiConfig cfg = ToiConfig.get();
+        if (!(backend instanceof KagrenacBackend)) return backend != MOCK && cfg.aiFallbackToMock ? MOCK : null;
+        String f = cfg.kagrenacFallback == null ? "line" : cfg.kagrenacFallback.toLowerCase(Locale.ROOT).trim();
+        AiBackend fb = fallbackBackend;
+        String want = switch (f) {
+            case "openai", "openrouter", "ollama" -> "openai";
+            case "mock", "offline" -> "mock";
+            case "none", "off", "silent" -> "none";
+            default -> "line";
+        };
+        if (want.equals("mock")) return MOCK;
+        if (fb == null || !fb.name().startsWith(want.equals("openai") ? "openai(" : "fallback(" + want)) {
+            fb = switch (want) {
+                case "openai" -> new OpenAiBackend();
+                case "none" -> new QuietFallbackBackend(true);
+                default -> new QuietFallbackBackend(false);
+            };
+            fallbackBackend = fb;
+        }
+        return fb;
     }
 
     public static void start(MinecraftServer s) {
@@ -83,13 +117,18 @@ public final class CompanionBrain {
 
     /** Backend to use right now: the configured one, or the mock while cooling down after a failure. */
     public static AiBackend active() {
-        if (backend != MOCK && System.currentTimeMillis() < failureUntil && ToiConfig.get().aiFallbackToMock) return MOCK;
+        boolean down = System.currentTimeMillis() < failureUntil
+                || backend instanceof KagrenacBackend k && k.outbox.offline(); // events already know it is unreachable
+        if (backend != MOCK && down) {
+            AiBackend fb = fallback();
+            if (fb != null) return fb;
+        }
         return backend;
     }
 
     public static String status() {
         long cd = Math.max(0, failureUntil - System.currentTimeMillis()) / 1000;
-        return "backend " + backend.name() + (backend instanceof KagrenacBackend k ? " [" + k.serverInfo() + "]" : "")
+        return "backend " + backend.name() + (backend instanceof KagrenacBackend k ? " [" + k.serverInfo() + "; events " + k.outbox.status() + "]" : "")
                 + ", active " + active().name() + ", ok " + ok + ", failed " + failed
                 + (cd > 0 ? ", cooling down " + cd + "s" : "") + (lastError.isBlank() ? "" : ", last error: " + lastError)
                 + ", item knowledge " + ItemKnowledgeStore.get().size();
@@ -186,15 +225,30 @@ public final class CompanionBrain {
                 Throwable cause = err.getCause() != null ? err.getCause() : err;
                 lastError = cause.getClass().getSimpleName() + (cause.getMessage() == null ? "" : ": " + cause.getMessage());
                 if (lastError.length() > 200) lastError = lastError.substring(0, 200);
-                TradeOfImmersion.LOGGER.warn("AI turn failed ({}): {}", b.name(), lastError);
+                dev.yucktheslime.tradeofimmersion.util.QuietLog.warn("ai-turn", "AI turn failed ({}): {}; using the fallback for "
+                        + ToiConfig.get().aiFailureCooldownSeconds + "s", b.name(), lastError);
                 failureUntil = System.currentTimeMillis() + ToiConfig.get().aiFailureCooldownSeconds * 1000L;
-                if (ToiConfig.get().aiFallbackToMock && b != MOCK) r = MockBackend.reply(req);
-                else {
-                    if (p.eventType == null) live.say("...(I can't think straight right now: AI backend unreachable)");
+                AiBackend fb = b == backend ? fallback() : null;
+                if (fb == MOCK) {
+                    r = MockBackend.reply(req);
+                } else if (fb != null) {
+                    // async fallback (short line or OpenAI-compatible): its reply is applied when it arrives
+                    int g2 = ++s.gen;
+                    s.inFlight = true;
+                    fb.companionTurn(req).whenComplete((r2, e2) -> srv.execute(() -> {
+                        if (s.gen != g2) return;
+                        s.inFlight = false;
+                        CompanionEntity c2 = find(srv, id);
+                        if (c2 != null && e2 == null && r2 != null) apply(c2, r2, p);
+                    }));
+                    return;
+                } else {
+                    if (p.eventType == null && ToiConfig.get().chatShowAiErrors) live.say("...(I can't think straight right now: AI backend unreachable)");
                     return;
                 }
             } else {
                 ok++;
+                if (b == backend) dev.yucktheslime.tradeofimmersion.util.QuietLog.clear("ai-turn");
             }
             apply(live, r, p);
         }));

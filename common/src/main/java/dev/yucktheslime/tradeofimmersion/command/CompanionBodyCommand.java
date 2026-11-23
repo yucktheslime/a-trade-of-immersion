@@ -127,7 +127,7 @@ public final class CompanionBodyCommand {
         CompanionEntity ce = Companions.find(ctx.getSource().getServer(), t.id().toString(), null);
         if (ce != null && !g.equals("auto")) ce.setGender(g);
         commit(ctx);
-        ctx.getSource().sendSuccess(() -> Component.literal(t.name() + " gender: " + g), true);
+        ctx.getSource().sendSuccess(() -> Component.literal(t.name() + " gender: " + g), dev.yucktheslime.tradeofimmersion.config.ToiConfig.get().chatOpFeedback);
         return 1;
     }
 
@@ -146,7 +146,7 @@ public final class CompanionBodyCommand {
         d.name = t.name();
         d.genes.put(gene, v);
         commit(ctx);
-        ctx.getSource().sendSuccess(() -> Component.literal(t.name() + " " + gene + " = " + v), true);
+        ctx.getSource().sendSuccess(() -> Component.literal(t.name() + " " + gene + " = " + v), dev.yucktheslime.tradeofimmersion.config.ToiConfig.get().chatOpFeedback);
         return 1;
     }
 
@@ -156,7 +156,7 @@ public final class CompanionBodyCommand {
         if (d != null) d.genes.clear();
         commit(ctx);
         ctx.getSource().sendSuccess(() -> Component.literal(t.name() + " body traits reset (gender kept; use '/toi gender "
-                + t.name() + " auto' to clear it)"), true);
+                + t.name() + " auto' to clear it)"), dev.yucktheslime.tradeofimmersion.config.ToiConfig.get().chatOpFeedback);
         return 1;
     }
 

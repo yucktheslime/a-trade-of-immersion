@@ -60,20 +60,49 @@ public final class WorldEvents {
         Entity killer = source.getEntity();
         String text = who(dead) + (killer != null ? " was killed by " + who(killer) : " died (" + source.getMsgId() + ")");
         boolean notable = dead instanceof Player || dead instanceof VillagerEntityMCA || dead instanceof CompanionEntity || dead.hasCustomName();
-        boolean logged = false;
+        forwardDeath(dead, source, killer, notable);
         for (CompanionEntity c : companionsNear(dead, r)) {
             boolean mine = killer == c;
             if (!notable && !mine && dead.distanceToSqr(c) > 16 * 16) continue;
             NpcMemoryStore.get().event(c.getUUID(), "death", mine ? "You killed " + who(dead) : text);
-            if (!logged) {
-                logged = true; // one log-only Kagrenac event per death, visible to every NPC of this world
-                dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.event("entity_died", null, text + " near " + c.name()
-                        + " at " + dead.blockPosition().toShortString());
-            }
             if (c.isOwner(dead)) CompanionBrain.onEvent(c, "combat_ended", "Your companion " + who(dead) + " just died! (" + text + ")");
             else if (notable && !(dead instanceof CompanionEntity o && o == c)) CompanionBrain.onEvent(c, "death", text + " nearby.");
         }
         return EventResult.pass();
+    }
+
+    private static boolean boss(Entity e) {
+        return e instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon || e instanceof net.minecraft.world.entity.boss.wither.WitherBoss
+                || e instanceof net.minecraft.world.entity.monster.warden.Warden || e instanceof net.minecraft.world.entity.monster.ElderGuardian;
+    }
+
+    private static String where(Entity e) {
+        return e.blockPosition().toShortString() + " in the " + e.level().dimension().location().getPath().replace('_', ' ');
+    }
+
+    /**
+     * One log-only Kagrenac event per death worth knowing about, wherever it happened (no companion has to be near):
+     * players, companions, MCA villagers, named mobs and bosses, and kills by companions (and, with
+     * kagrenacLogMobKills, players' kills of hostile mobs). Sent in the background; never shown in chat.
+     */
+    private static void forwardDeath(LivingEntity dead, DamageSource source, Entity killer, boolean notable) {
+        boolean byCompanion = killer instanceof CompanionEntity;
+        boolean mobKill = killer instanceof Player && dead instanceof net.minecraft.world.entity.monster.Enemy && ToiConfig.get().kagrenacLogMobKills;
+        if (!notable && !boss(dead) && !byCompanion && !mobKill) return;
+        String what;
+        try {
+            what = source.getLocalizedDeathMessage(dead).getString(); // the vanilla death line, e.g. "Steve was slain by Zombie"
+        } catch (Exception e) {
+            what = who(dead) + (killer != null ? " was killed by " + who(killer) : " died");
+        }
+        String kind = dead instanceof Player ? "Player death: "
+                : dead instanceof CompanionEntity c ? "Companion death (" + c.getOwnerName() + "'s companion): "
+                : dead instanceof VillagerEntityMCA ? "Villager death: "
+                : boss(dead) ? "Boss killed: " : "Kill: ";
+        Map<String, String> ctx = new java.util.LinkedHashMap<>();
+        ctx.put("location", where(dead));
+        if (killer != null) ctx.put("killer", who(killer));
+        dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.event("entity_died", null, kind + what + " at " + where(dead), ctx);
     }
 
     private static EventResult onHurt(LivingEntity victim, DamageSource source, float amount) {
@@ -81,23 +110,30 @@ public final class WorldEvents {
         Entity attacker = source.getEntity();
         if (attacker == null) return EventResult.pass();
         boolean playerOrVillager = victim instanceof Player || victim instanceof VillagerEntityMCA || attacker instanceof Player;
-        if (!playerOrVillager) return EventResult.pass();
+        // fights worth forwarding even with no companion near: player vs player/villager/companion, and attacks on villagers/companions
+        boolean social = victim instanceof Player || victim instanceof VillagerEntityMCA || victim instanceof CompanionEntity;
+        boolean forward = social && (attacker instanceof Player || attacker instanceof CompanionEntity || victim instanceof VillagerEntityMCA
+                || victim instanceof CompanionEntity || boss(attacker));
+        if (!playerOrVillager && !forward) return EventResult.pass();
         long now = victim.level().getGameTime();
         String key = attacker.getStringUUID() + victim.getStringUUID();
         Long last = LAST_HURT_NOTE.get(UUID.nameUUIDFromBytes(key.getBytes()));
         if (last != null && now - last < 200) return EventResult.pass();
         LAST_HURT_NOTE.put(UUID.nameUUIDFromBytes(key.getBytes()), now);
         if (LAST_HURT_NOTE.size() > 2000) LAST_HURT_NOTE.clear();
-        boolean loggedHurt = false;
+        if (!forward && playerOrVillager && !companionsNear(victim, ToiConfig.get().eventAwarenessRadius).isEmpty()) forward = true;
+        if (forward && !(victim instanceof CompanionEntity)) { // CompanionEntity.hurt logs its own damage
+            Map<String, String> ctx = new java.util.LinkedHashMap<>();
+            ctx.put("location", where(victim));
+            dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.event(victim instanceof Player ? "player_hurt" : "npc_hurt", null,
+                    who(attacker) + " attacked " + who(victim) + " (" + Math.round(amount) + " damage, health "
+                            + Math.max(0, Math.round(victim.getHealth() - amount)) + "/" + Math.round(victim.getMaxHealth()) + ") at " + where(victim), ctx);
+        }
+        if (!playerOrVillager) return EventResult.pass();
         for (CompanionEntity c : companionsNear(victim, ToiConfig.get().eventAwarenessRadius)) {
             if (victim == c) continue; // CompanionEntity.hurt records its own damage
             String text = who(attacker) + " attacked " + (c.isOwner(victim) ? "your companion " : "") + who(victim);
             NpcMemoryStore.get().event(c.getUUID(), "attack", text);
-            if (!loggedHurt) {
-                loggedHurt = true;
-                dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.event(victim instanceof Player ? "player_hurt" : "npc_hurt", null,
-                        who(attacker) + " attacked " + who(victim) + " (" + Math.round(amount) + " damage) near " + c.name());
-            }
             if (c.isOwner(victim) && !(attacker instanceof Player) && c.getTarget() == null) {
                 // the defend-owner target goal handles the fight; just a heads-up line occasionally
                 CompanionBrain.onEvent(c, "combat_started", text + ".");

@@ -65,7 +65,7 @@ public final class VillagerTalk {
                     VillagerEntityMCA vill = findVillager(srv, vid);
                     if (vill == null) return;
                     if (err != null || line == null || line.isBlank()) {
-                        TradeOfImmersion.LOGGER.warn("Villager line failed: {}", err == null ? "empty" : err.toString());
+                        if (err != null) dev.yucktheslime.tradeofimmersion.util.QuietLog.warn("villager-line", "Villager line failed: {}", err.toString());
                         return;
                     }
                     String clean = line.replaceAll("^\"|\"$", "").trim();
