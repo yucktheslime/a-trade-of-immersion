@@ -126,7 +126,7 @@ final class KagrenacOutbox {
                     failures = 0;
                     nextAttempt = 0;
                     QuietLog.clear(WARN_KEY);
-                    dev.yucktheslime.tradeofimmersion.TradeOfImmersion.LOGGER.info("Kagrenac reachable again; sending {} queued event(s)", queue.size());
+                    dev.yucktheslime.tradeofimmersion.TradeOfImmersion.LOGGER.info("Kagrenac reachable again; delivered a queued event, {} more queued", queue.size());
                 }
                 retry = false;
             } else {

@@ -193,33 +193,176 @@ How the voice works:
 - Female and male NPCs get different PocketTTS voices, and each NPC always keeps the same voice. You can
   choose a fixed voice per NPC on the dashboard's **Profiles** page.
 - `voiceVillagers` (default `true`) also voices MCA villagers' lines. `voiceVolume` is between 0 and 1.
-- On a multiplayer server, the voice is fetched by each player's own game. Every player who wants voice
-  needs the same `kagrenacBaseUrl` and token in their own client config, and must be able to reach the
-  server.
+- On a multiplayer server, only the Minecraft server talks to Kagrenac. It fetches each spoken line and
+  streams the audio to the players near the NPC. Players need nothing but the mod: no URL, no token.
+  Each player can mute NPC voices for themselves with `"voicePlay": false` in their own config.
 
 Speech input (talking to NPCs with a microphone) is not in this version. It is on the [roadmap](ROADMAP.md).
+
+## 9. Optional: connect a hosted server (Bisect etc.)
+
+Kagrenac keeps running **on your PC**, exactly as in steps 1 to 8. This step is only needed when the Minecraft
+server runs somewhere else, such as Bisect Hosting or another server host, and should use the Kagrenac on your PC.
+Single player and a server on your own PC do not need it.
+
+What it looks like:
+
+```
+players --> Minecraft server (Bisect) --> https tunnel --> your PC: DwemerDistro, port 19000 --> Kagrenac
+```
+
+- The PC must be **on**, with the **DwemerDistro launcher running**, the whole time people play. When it is
+  off, the server keeps working: NPCs say a short in-character line now and then (or stay silent, see
+  `kagrenacFallback`), and game events wait in a queue that is sent when your PC is back.
+- Only the Minecraft server talks to your PC. Players install only the mod.
+- The tunnel gives your PC a public **https** address without opening ports on your router.
+  Pick **one** of the two tunnels below.
+
+### Option A: Cloudflare quick tunnel (no account needed)
+
+1. Open the distro shell (step 3).
+2. Install `cloudflared` once:
+
+   ```bash
+   curl -L -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+   sudo dpkg -i /tmp/cloudflared.deb
+   ```
+
+3. Start the tunnel to the DwemerDistro custom-mods port, 19000:
+
+   ```bash
+   cloudflared tunnel --url http://localhost:19000
+   ```
+
+   After a few seconds it prints an address such as `https://some-random-words.trycloudflare.com`.
+   Keep this window open while people play.
+4. Your Kagrenac URL is that address plus the server path:
+
+   ```
+   https://some-random-words.trycloudflare.com/custom-mods/TradeOfImmersionServer
+   ```
+
+- A quick tunnel gets a **new address every time you start it**. Then update `kagrenacBaseUrl` on the
+  host (step "Edit the config on the host" below) each time. For a fixed address, create a free
+  Cloudflare account and a named tunnel: <https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/>.
+
+### Option B: Tailscale Funnel (fixed address, free account)
+
+1. Make a free account at <https://tailscale.com>.
+2. In the distro shell, install Tailscale and sign in (it prints a link to open in your browser):
+
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh
+   sudo tailscale up
+   ```
+
+   If it says the daemon is not running, start it with `sudo tailscaled >/dev/null 2>&1 &` and run
+   `sudo tailscale up` again.
+3. Share port 19000 on the internet:
+
+   ```bash
+   sudo tailscale funnel --bg 19000
+   ```
+
+   - The first time, it prints a link to turn on HTTPS and Funnel for your account. Open it, allow it, and
+     run the command again.
+   - It prints your address, such as `https://my-pc.tail1234.ts.net`. That address stays the same.
+   - Stop sharing with `sudo tailscale funnel --bg 19000 off`.
+4. Your Kagrenac URL:
+
+   ```
+   https://my-pc.tail1234.ts.net/custom-mods/TradeOfImmersionServer
+   ```
+
+### Check the tunnel
+
+Open `<your Kagrenac URL>/health.php` in a browser. You should see `{"protocol":1,"ok":true,...}`.
+
+The **dashboard does not open through the tunnel** (it answers "The dashboard is only available on the PC
+that runs it"). That is on purpose: the dashboard has no password. Keep using it on your PC at
+<http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer/>.
+
+### Edit the config on the host
+
+1. Stop the Minecraft server in the host's control panel.
+2. Open the host's **File Manager** and edit `config/tradeofimmersion.json`. Upload the mod first and
+   start the server once if the file is not there yet.
+3. Set these values, using your URL and the token from step 5:
+
+   ```json
+   "aiBackend": "kagrenac",
+   "kagrenacBaseUrl": "https://some-random-words.trycloudflare.com/custom-mods/TradeOfImmersionServer",
+   "kagrenacToken": "paste-the-token-here",
+   ```
+
+   - With a remote URL the token is **required**. Without it, the mod sends nothing but the health check and
+     logs a warning.
+   - If your host lets you set environment variables, you can put the token in `TOI_KAGRENAC_TOKEN` instead.
+     It overrides `kagrenacToken`.
+   - Use the `https://` address. With plain `http://` over the internet, the server log warns that the token
+     and the conversations travel unencrypted.
+4. Start the server. In the console you should see:
+
+   ```
+   AI backend: kagrenac(https://some-random-words.trycloudflare.com/custom-mods/TradeOfImmersionServer, remote)
+   ```
+
+5. As an op, run `/npc ai status` in game. It should say `(remote): ready ... token set`.
+
+### What players see
+
+- Game events (deaths, kills, fights) go only to Kagrenac, never into chat. NPCs can react to them in their
+  own words.
+- Companion and villager replies only reach players near the NPC (`npcChatRadius`, 24 blocks); the owner
+  hears their companion from further away (`npcChatOwnerRadius`, 64 blocks).
+- Mod status and errors stay in the server console. `/npc ai status` is for ops only.
+
+### Good to know
+
+- The tunnel shares the whole DwemerDistro custom-mods port, so other custom mods you run on port 19000
+  can be reached too. Stop the tunnel when you do not need it.
+- Events are sent in the background and never slow down the server. While your PC is off they wait in a
+  queue (`kagrenacEventQueueSize`, 200; the oldest go first when it is full). They are retried with a growing pause of up
+  to `kagrenacRetryMaxSeconds` (300), and are marked "(N min ago)" when they arrive late. The console
+  warns at most once a minute.
+- `kagrenacFallback` sets what NPCs do while Kagrenac is unreachable:
+  `line` (default: a short in-character line, at most every 2 minutes per companion), `none` (silent),
+  `openai` (answer with OpenRouter straight from the host: also set `"aiPreset": "openrouter"`, and the key in
+  `aiApiKey` or the `TOI_API_KEY` environment variable; `aiModel` picks the model) or `mock`.
 
 ## Mod config keys for Kagrenac
 
 | Key | Default | Meaning |
 |---|---|---|
 | `aiBackend` | `openai` | set to `kagrenac` (or run `/npc ai preset kagrenac`) |
-| `kagrenacBaseUrl` | `http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer` | the server |
-| `kagrenacToken` | empty | empty = read the `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) environment variable |
+| `kagrenacBaseUrl` | `http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer` | the server; any http/https URL, such as a tunnel (step 9) |
+| `kagrenacToken` | empty | the server token; the `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) environment variable overrides it. Required for a remote URL |
 | `kagrenacSessionId` | empty | history is kept per session; empty = `mc-<world name>` |
 | `kagrenacAllowedActions` | all 13 | actions the game will run; remove any you do not want |
 | `kagrenacLogEvents` | true | send deaths, damage, gifts, villager talk and family changes |
 | `kagrenacSyncBios` | true | push companion and villager bios to the dashboard |
 | `kagrenacUseDecision` | true | let the server pick which companion answers |
 | `kagrenacCancelOnInterrupt` | true | a new line cancels the reply still being written |
-| `voiceEnabled`, `voiceVillagers`, `voiceVolume`, `voiceRange` | false, true, 1.0, 24 | voice (client side) |
+| `voiceEnabled`, `voiceVillagers`, `voiceVolume`, `voiceRange` | false, true, 1.0, 24 | voice: `voiceEnabled` on the server fetches and streams it; the others are per player |
+| `voicePlay` | true | per player: `false` mutes NPC voices on your own game |
+| `kagrenacFallback` | `line` | while Kagrenac is unreachable: `line`, `none`, `openai` or `mock` |
+| `kagrenacEventQueueSize` | 200 | events kept while Kagrenac is unreachable |
+| `kagrenacRetryMaxSeconds` | 300 | longest pause between retries |
+| `kagrenacLogMobKills` | false | also send ordinary mobs killed by players |
+| `npcChatRadius`, `npcChatOwnerRadius` | 24, 64 | who sees NPC lines: nearby players, and the owner from further away |
+| `chatShowAiErrors` | false | show "can't think" error lines in chat instead of the quiet fallback |
+| `chatCompanionDeathNotice` | true | tell the owner (only) when their companion dies |
+| `chatOpFeedback` | false | echo mod command results to other ops |
+| `statusForEveryone` | false | let non-ops run `/npc ai status` |
 
 Switching back is one command: `/npc ai preset openrouter`, `/npc ai preset ollama` or `/npc ai preset mock`.
 
 ## Privacy and safety notes
 
 - Everything runs on your own PC. The only data that leaves it is what the server sends to OpenRouter
-  to generate replies.
+  to generate replies, plus, if you set up step 9, the traffic between your PC and your Minecraft server
+  through the tunnel.
+- The mod never writes the token to its log.
 - The game only runs actions on its own allowlist, and only on the NPC that was asked. Each action is
   checked twice: by the server, then again by the game before it runs.
 - The server code is in [`kagrenac-server/`](../kagrenac-server/). It is based on the Kagrenac template

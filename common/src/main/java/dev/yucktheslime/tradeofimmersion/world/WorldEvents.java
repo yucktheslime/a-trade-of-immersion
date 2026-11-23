@@ -65,7 +65,7 @@ public final class WorldEvents {
             boolean mine = killer == c;
             if (!notable && !mine && dead.distanceToSqr(c) > 16 * 16) continue;
             NpcMemoryStore.get().event(c.getUUID(), "death", mine ? "You killed " + who(dead) : text);
-            if (c.isOwner(dead)) CompanionBrain.onEvent(c, "combat_ended", "Your companion " + who(dead) + " just died! (" + text + ")");
+            if (c.isOwner(dead)) CompanionBrain.onEvent(c, "combat_ended", who(dead) + ", the player you travel with, just died! (" + text + ")");
             else if (notable && !(dead instanceof CompanionEntity o && o == c)) CompanionBrain.onEvent(c, "death", text + " nearby.");
         }
         return EventResult.pass();

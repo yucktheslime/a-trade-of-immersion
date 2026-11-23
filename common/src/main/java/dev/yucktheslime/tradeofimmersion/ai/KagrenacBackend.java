@@ -93,7 +93,7 @@ public final class KagrenacBackend implements AiBackend {
         String url = ToiConfig.get().kagrenacBaseUrl == null ? "" : ToiConfig.get().kagrenacBaseUrl.trim();
         if (!remote()) return;
         if (ToiConfig.get().effectiveKagrenacToken().isBlank()) {
-            TradeOfImmersion.LOGGER.warn("Kagrenac URL {} is not local: a token is required (kagrenacToken or env TOI_KAGRENAC_TOKEN). Nothing is sent until one is set.", safeUrl(url));
+            TradeOfImmersion.LOGGER.warn("Kagrenac URL {} is not local: a token is required (kagrenacToken or env TOI_KAGRENAC_TOKEN). Only the health check (no game data) is sent until one is set.", safeUrl(url));
         }
         if (url.toLowerCase(Locale.ROOT).startsWith("http:")) {
             TradeOfImmersion.LOGGER.warn("Kagrenac URL {} uses plain http over the internet: the token and conversations travel unencrypted. Use an https tunnel (Cloudflare Tunnel, Tailscale Funnel).", safeUrl(url));

@@ -95,7 +95,7 @@ public final class VoiceSync {
             PENDING.decrementAndGet();
             if (err != null) {
                 Throwable c = err.getCause() != null ? err.getCause() : err;
-                lastStatus = "voice failed: " + c.getMessage();
+                lastStatus = "voice failed: " + (c.getMessage() != null ? c.getMessage() : c.getClass().getSimpleName());
                 QuietLog.warn("npc-voice", "NPC voice failed: {}", c.toString());
                 return;
             }

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.1
+- **Optional hosted server:** Kagrenac still runs on your PC by default. A Minecraft server elsewhere (Bisect or
+  any host) can now use it through an https tunnel: `kagrenacBaseUrl` accepts any http/https URL, and
+  `kagrenacToken` can be set in the config (the `TOI_KAGRENAC_TOKEN` env var overrides it).
+  - A remote URL requires a token (only the health check is sent without one). Plain http over the internet is
+    warned about, and the token is never logged. The dashboard refuses requests that come through a tunnel.
+  - Guide: [Optional: connect a hosted server](docs/KAGRENAC_SETUP.md#9-optional-connect-a-hosted-server-bisect-etc).
+- **Event forwarding:** player, companion and MCA villager deaths (with the death message and place), boss kills,
+  kills by companions and fights are sent to Kagrenac. Optionally ordinary mob kills too (`kagrenacLogMobKills`).
+  - Sent in the background through a bounded queue (`kagrenacEventQueueSize`). They are retried with backoff
+    (`kagrenacRetryMaxSeconds`) while Kagrenac is unreachable and marked "(N min ago)" when they arrive late.
+  - Warnings are rate-limited to once a minute.
+- **Fallback while Kagrenac is unreachable:** `kagrenacFallback` = `line` (default: a short in-character line
+  now and then), `none`, `openai` (OpenRouter from the server) or `mock`.
+- **Clean chat:**
+  - Events never go to chat. NPC lines only reach nearby players (`npcChatRadius`) and the owner (`npcChatOwnerRadius`).
+  - AI errors stay in the console (`chatShowAiErrors`), and command results are no longer echoed to other ops
+    (`chatOpFeedback`).
+  - The companion death notice goes to the owner only (`chatCompanionDeathNotice`).
+  - `/npc ai status` is for ops (`statusForEveryone`).
+- **Voice through the server:** the Minecraft server fetches the speech from Kagrenac and streams it to nearby
+  players. Clients no longer need the URL or the token. `voicePlay: false` mutes it per player.
+
 ## 0.3.0
 - **Kagrenac is the CHIM-style brain:** a full protocol v1 client (`aiBackend: kagrenac`, `/npc ai preset kagrenac`).
   - All 13 actions go through the allowlisted action mechanism: the server allowlist, then client validation

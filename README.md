@@ -110,6 +110,12 @@ What you get with the bundled server ([kagrenac-server/](kagrenac-server/MINECRA
 
 A plain upstream Kagrenac template server also works, but only with its 3 actions and 4 event types.
 
+**Hosted server (Bisect etc.), optional:** Kagrenac stays on your PC, and a Minecraft server at a host connects to it
+through an https tunnel (Cloudflare quick tunnel or Tailscale Funnel). Set `kagrenacBaseUrl` to the tunnel URL plus
+`/custom-mods/TradeOfImmersionServer` and `kagrenacToken` in the host's config file. Events are queued while your PC is
+off, and players' chat stays clean. See
+[step 9 of the guide](docs/KAGRENAC_SETUP.md#9-optional-connect-a-hosted-server-bisect-etc).
+
 ### Offline mock
 
 `"aiBackend": "mock"` uses keyword rules, with no network. Examples: "follow me", "stay", "attack the zombie", "ride the horse", "get off", "eat something", "give me the bread", "what is this", "talk to Anna about the weather".
@@ -182,17 +188,21 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `aiMaxRequestsPerMinute` | 20 | global cap on AI calls |
 | `aiMinSecondsBetweenTurns` | 2 | per-companion gap; newer triggers wait, latest wins |
 | `aiFallbackToMock`, `aiFailureCooldownSeconds` | true, 60 | behavior when the backend is down |
-| `kagrenacBaseUrl` | `http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer` | Kagrenac server |
-| `kagrenacToken` | empty | empty = env `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) |
+| `kagrenacBaseUrl` | `http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer` | Kagrenac server; any http/https URL, e.g. a tunnel to your PC for a hosted server |
+| `kagrenacToken` | empty | server token; env `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) overrides it; required for a remote URL |
 | `kagrenacSessionId` | empty | defaults to `mc-<world name>` |
 | `kagrenacAllowedActions` | all 13 | the client-side action allowlist |
 | `kagrenacLogEvents`, `kagrenacSyncBios`, `kagrenacUseDecision`, `kagrenacCancelOnInterrupt` | true | events, bios, NPC selection, cancel on interruption |
+| `kagrenacFallback` | `line` | while Kagrenac is unreachable: `line` (short in-character line), `none`, `openai` or `mock` |
+| `kagrenacEventQueueSize`, `kagrenacRetryMaxSeconds` | 200, 300 | offline event queue and longest retry pause |
+| `kagrenacLogMobKills` | false | also send ordinary mobs killed by players |
 
-**Voice (Kagrenac, client side)**
+**Voice (Kagrenac)**
 
 | Key | Default | Meaning |
 |---|---|---|
-| `voiceEnabled` | false | speak NPC replies (needs TTS on the Kagrenac server) |
+| `voiceEnabled` | false | server side: fetch spoken replies from Kagrenac and stream them to nearby players (needs TTS on the Kagrenac server) |
+| `voicePlay` | true | per player: `false` mutes NPC voices |
 | `voiceVillagers` | true | voice MCA villagers' lines too |
 | `voiceVolume`, `voiceRange` | 1.0, 24 | volume and hearing distance in blocks (Voice/Speech slider applies) |
 
@@ -201,6 +211,8 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | Key | Default | Meaning |
 |---|---|---|
 | `chatHearingRadius`, `ownerChatRadius` | 16, 10 | who hears chat |
+| `npcChatRadius`, `npcChatOwnerRadius` | 24, 64 | who sees NPC lines: nearby players, and the owner from further away |
+| `chatShowAiErrors`, `chatCompanionDeathNotice`, `chatOpFeedback`, `statusForEveryone` | false, true, false, false | error lines in chat, owner-only companion death notice, command echo to ops, `/npc ai status` for non-ops |
 | `eventAwarenessRadius`, `reactToEvents` | 32, true | which deaths and attacks companions notice and react to |
 | `maxMemoryEvents`, `memoryEventsInPrompt`, `chatLinesInPrompt` | 200, 15, 12 | memory size and how much goes into prompts |
 | `maxVillagerExchanges`, `villagerReplyMaxWords` | 3, 30 | companion ↔ villager conversations |
