@@ -33,7 +33,7 @@ public abstract class CompanionTask {
     protected abstract boolean step(CompanionEntity c);
 
     protected void onTimeout(CompanionEntity c) {
-        NpcMemoryStore.get().event(c.getUUID(), "task", describe() + " timed out");
+        taskEvent(c, describe() + " timed out");
     }
 
     public void stop(CompanionEntity c) {
@@ -79,7 +79,7 @@ public abstract class CompanionTask {
             Vec3 dest = destination(c);
             double arrive = c.isPassenger() ? 4.0 : 2.5;
             if (c.position().distanceToSqr(dest) < arrive * arrive) {
-                NpcMemoryStore.get().event(c.getUUID(), "task", "arrived at " + label);
+                taskEvent(c, "arrived at " + label);
                 return true;
             }
             walkTo(c, dest, 1.1);
@@ -113,7 +113,7 @@ public abstract class CompanionTask {
                     int seats = vehicle instanceof net.minecraft.world.entity.vehicle.Boat b ? (b instanceof net.minecraft.world.entity.vehicle.ChestBoat ? 1 : 2) : 1;
                     if (vehicle.getPassengers().size() < seats) ok = c.startRiding(vehicle, true);
                 }
-                NpcMemoryStore.get().event(c.getUUID(), "task", ok ? "mounted " + vehicle.getName().getString()
+                taskEvent(c, ok ? "mounted " + vehicle.getName().getString()
                         : "could not mount " + vehicle.getName().getString() + " (no free seat or it refuses riders)");
                 return true;
             }
@@ -148,7 +148,7 @@ public abstract class CompanionTask {
             List<ItemEntity> items = c.level().getEntitiesOfClass(ItemEntity.class, c.getBoundingBox().inflate(radius),
                     e -> e.isAlive() && !e.getItem().isEmpty() && c.inventory.canAddItem(e.getItem()));
             if (items.isEmpty()) {
-                NpcMemoryStore.get().event(c.getUUID(), "task", "picked up " + collected + " item stack(s)");
+                taskEvent(c, "picked up " + collected + " item stack(s)");
                 return true;
             }
             ItemEntity nearest = items.stream().min(Comparator.comparingDouble(c::distanceToSqr)).get();
@@ -168,7 +168,7 @@ public abstract class CompanionTask {
 
         @Override
         protected void onTimeout(CompanionEntity c) {
-            NpcMemoryStore.get().event(c.getUUID(), "task", "picked up " + collected + " item stack(s) (stopped)");
+            taskEvent(c, "picked up " + collected + " item stack(s) (stopped)");
         }
 
         @Override
@@ -211,5 +211,11 @@ public abstract class CompanionTask {
         public String describe() {
             return "walking to " + villager.getName().getString() + " to talk";
         }
+    }
+
+    /** A task outcome: remembered locally and, with Kagrenac, logged as an action_result event. */
+    static void taskEvent(CompanionEntity c, String text) {
+        NpcMemoryStore.get().event(c.getUUID(), "task", text);
+        dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.event("action_result", c, c.name() + ": " + text);
     }
 }

@@ -93,8 +93,8 @@ public final class PromptBuilder {
         u.append("Inventory: ").append(inv.isEmpty() ? "empty" : String.join("; ", inv.subList(0, Math.min(inv.size(), 24)))).append('\n');
         ctx.put("health", health);
         ctx.put("doing", doing + (vehicle != null ? ", riding " + vehicle.getName().getString() : ""));
-        ctx.put("location", where);
-        ctx.put("time_of_day", time);
+        ctx.put("location", where + " at " + c.blockPosition().toShortString() + " (" + c.level().dimension().location().getPath() + ")");
+        ctx.put("time_of_day", time + (c.level().isThundering() ? ", thunderstorm" : c.level().isRaining() ? ", raining" : ""));
         ctx.put("holding", c.getMainHandItem().isEmpty() ? "nothing" : c.getMainHandItem().getHoverName().getString());
         ctx.put("inventory", inv.isEmpty() ? "empty" : inv.stream().limit(8).collect(Collectors.joining(", ")));
 
@@ -102,14 +102,19 @@ public final class PromptBuilder {
         u.append("== Around you ==\n");
         List<Entity> near = c.level().getEntities(c, c.getBoundingBox().inflate(24), e -> e.isAlive() && !(e instanceof ItemEntity));
         near.sort(Comparator.comparingDouble(c::distanceToSqr));
-        List<String> people = new ArrayList<>(), creatures = new ArrayList<>(), villagers = new ArrayList<>(), things = new ArrayList<>();
+        List<String> people = new ArrayList<>(), creatures = new ArrayList<>(), villagers = new ArrayList<>(), things = new ArrayList<>(),
+                villagerNames = new ArrayList<>();
         for (Entity e : near) {
             int d = (int) Math.round(c.distanceTo(e));
             if (e instanceof Player p) {
                 people.add(p.getGameProfile().getName() + (c.isOwner(p) ? " (your companion)" : "") + " " + d + "m, health " + Math.round(p.getHealth())
                         + (p.getMainHandItem().isEmpty() ? "" : ", holding " + p.getMainHandItem().getHoverName().getString()));
             } else if (e instanceof VillagerEntityMCA v) {
-                if (villagers.size() < 6) villagers.add(McaVillagerUtil.profile(v, c.getOwner()).describe() + " (" + d + "m)");
+                if (villagers.size() < 6) {
+                    var prof = McaVillagerUtil.profile(v, c.getOwner());
+                    villagers.add(prof.describe() + " (" + d + "m)");
+                    villagerNames.add(prof.name() + " (" + prof.profession() + ", " + d + "m)");
+                }
             } else if (e instanceof CompanionEntity o) {
                 people.add(o.name() + " (companion of " + o.getOwnerName() + ") " + d + "m");
             } else if (e instanceof LivingEntity le) {
@@ -137,7 +142,9 @@ public final class PromptBuilder {
             }
         } catch (Throwable ignored) {
         }
-        ctx.put("nearby", String.join(", ", creatures.stream().limit(5).toList()) + (people.isEmpty() ? "" : "; people: " + String.join(", ", people.stream().limit(3).toList())));
+        ctx.put("nearby", String.join(", ", creatures.stream().limit(5).toList()) + (people.isEmpty() ? "" : "; people: " + String.join(", ", people.stream().limit(3).toList()))
+                + (things.isEmpty() ? "" : "; things: " + String.join(", ", things.stream().limit(2).toList())));
+        if (!villagerNames.isEmpty()) ctx.put("villagers", String.join(", ", villagerNames));
 
         // ---- memory
         var events = NpcMemoryStore.get().recentEvents(c.getUUID(), cfg.memoryEventsInPrompt);

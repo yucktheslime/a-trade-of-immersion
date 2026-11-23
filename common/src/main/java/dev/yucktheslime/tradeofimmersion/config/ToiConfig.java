@@ -26,7 +26,7 @@ public final class ToiConfig {
     // ---- AI backend ----
     /**
      * {@code "openai"}: any OpenAI-compatible chat API (Ollama, OpenRouter, LM Studio, ...).
-     * {@code "kagrenac"}: a Kagrenac server (PROTOCOL.md v1 turn/event endpoints).
+     * {@code "kagrenac"}: a Kagrenac server (the CHIM-style setup: server-side prompts, memory, dashboard, voice).
      * {@code "mock"}: no AI, keyword rules (for testing / offline).
      */
     public String aiBackend = "openai";
@@ -53,12 +53,42 @@ public final class ToiConfig {
     /** Minimum seconds between two AI turns of the same companion. */
     public double aiMinSecondsBetweenTurns = 2.0;
 
-    /** Kagrenac server base URL (manual DwemerDistro install default). */
-    public String kagrenacBaseUrl = "http://127.0.0.1:19000/custom-mods/KagrenacServer";
-    /** Kagrenac bearer token (from the server's config/config.php). Or env KAGRENAC_TOKEN. */
+    // ---- Kagrenac (aiBackend "kagrenac", see docs/KAGRENAC_SETUP.md) ----
+    /** Kagrenac server base URL: the kagrenac-server/ folder of this repo installed in DwemerDistro. */
+    public String kagrenacBaseUrl = "http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer";
+    /**
+     * Kagrenac bearer token (the "token" in the server's config/config.php; it only unlocks your own local server).
+     * Leave empty to read the environment variable TOI_KAGRENAC_TOKEN (or KAGRENAC_TOKEN).
+     */
     public String kagrenacToken = "";
-    /** Kagrenac session id (history is kept per session + NPC). Empty = world name. */
+    /** Kagrenac session id (history and memory are kept per session + NPC). Empty = "mc-" + world name. */
     public String kagrenacSessionId = "";
+    /**
+     * Actions this game may run for Kagrenac (the client-side allowlist; the server has its own allowed_actions).
+     * Names: follow_player, hold_position, attack_hostile, attack_target, go_to, mount, dismount, equip, use_item,
+     * give_item, pick_up, inspect_item, talk_to_villager. Remove a name to forbid it.
+     */
+    public java.util.List<String> kagrenacAllowedActions = new java.util.ArrayList<>(java.util.List.of(
+            "follow_player", "hold_position", "attack_hostile", "attack_target", "go_to", "mount", "dismount", "equip",
+            "use_item", "give_item", "pick_up", "inspect_item", "talk_to_villager"));
+    /** Send world events (deaths, damage, gifts, villager talk, relationships) to the Kagrenac event log so NPCs know what happened. */
+    public boolean kagrenacLogEvents = true;
+    /** Push companion and MCA villager bios (name, personality, profession, family) to the Kagrenac dashboard. */
+    public boolean kagrenacSyncBios = true;
+    /** Ask Kagrenac's decision.php which companion should answer when several are near and none is named or looked at. */
+    public boolean kagrenacUseDecision = true;
+    /** A new line to a companion that is still thinking cancels the old turn (cancel.php) instead of waiting. */
+    public boolean kagrenacCancelOnInterrupt = true;
+
+    // ---- voice (client side; Kagrenac speak.php) ----
+    /** Play NPC replies as speech from the NPC's position (needs a Kagrenac server with TTS enabled). Off by default. */
+    public boolean voiceEnabled = false;
+    /** Also speak MCA villager lines. */
+    public boolean voiceVillagers = true;
+    /** Voice volume 0..1 (also scaled by the "Voice/Speech" volume slider). */
+    public float voiceVolume = 1.0f;
+    /** Voice is heard up to this many blocks from the NPC. */
+    public int voiceRange = 24;
 
     // ---- companions ----
     /** Players within this many blocks of a companion are heard by it. */
@@ -153,7 +183,8 @@ public final class ToiConfig {
 
     public String effectiveKagrenacToken() {
         if (kagrenacToken != null && !kagrenacToken.isBlank()) return kagrenacToken;
-        String env = System.getenv("KAGRENAC_TOKEN");
+        String env = System.getenv("TOI_KAGRENAC_TOKEN");
+        if (env == null || env.isBlank()) env = System.getenv("KAGRENAC_TOKEN");
         return env == null ? "" : env;
     }
 
@@ -186,6 +217,15 @@ public final class ToiConfig {
             }
         } catch (IOException e) {
             TradeOfImmersion.LOGGER.warn("Could not write config {}", path, e);
+        }
+    }
+
+    /** Writes the current settings back to the file (used by /npc ai preset). */
+    public static void save() {
+        try (Writer w = Files.newBufferedWriter(path(), StandardCharsets.UTF_8)) {
+            GSON.toJson(instance, w);
+        } catch (IOException e) {
+            TradeOfImmersion.LOGGER.warn("Could not write config {}", path(), e);
         }
     }
 }

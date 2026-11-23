@@ -45,6 +45,8 @@ public final class CompanionBrain {
         boolean inFlight;
         long lastTurn;
         Pending pending;
+        /** Bumped by every run and every cancel: a completion for an older generation is ignored. */
+        int gen;
     }
 
     private record Pending(String speaker, String trigger, String eventType, int depth) {
@@ -67,6 +69,7 @@ public final class CompanionBrain {
         String world = s.getWorldData().getLevelName();
         KagrenacBackend.worldSession = KagrenacBackend.safeId("mc-" + world);
         reload();
+        KagrenacWorld.reset();
     }
 
     public static void stop() {
@@ -86,7 +89,8 @@ public final class CompanionBrain {
 
     public static String status() {
         long cd = Math.max(0, failureUntil - System.currentTimeMillis()) / 1000;
-        return "backend " + backend.name() + ", active " + active().name() + ", ok " + ok + ", failed " + failed
+        return "backend " + backend.name() + (backend instanceof KagrenacBackend k ? " [" + k.serverInfo() + "]" : "")
+                + ", active " + active().name() + ", ok " + ok + ", failed " + failed
                 + (cd > 0 ? ", cooling down " + cd + "s" : "") + (lastError.isBlank() ? "" : ", last error: " + lastError)
                 + ", item knowledge " + ItemKnowledgeStore.get().size();
     }
@@ -114,6 +118,18 @@ public final class CompanionBrain {
         if (!ToiConfig.get().enabled || c.getServer() == null) return;
         State s = STATES.computeIfAbsent(c.getUUID(), k -> new State());
         long now = System.currentTimeMillis();
+        // CHIM-style interruption: a new player line to a companion that is still thinking cancels the old turn
+        // on the Kagrenac server (cancel.php) and is answered right away.
+        if (s.inFlight && p.eventType == null && backend instanceof KagrenacBackend k && active() == k
+                && ToiConfig.get().kagrenacCancelOnInterrupt && takeSlot(now)) {
+            k.cancel(KagrenacBackend.companionId(c.getUUID().toString()));
+            s.gen++;
+            s.inFlight = false;
+            s.pending = null;
+            TradeOfImmersion.LOGGER.info("Kagrenac: {} was interrupted, old turn cancelled", c.name());
+            run(c, s, p);
+            return;
+        }
         if (s.inFlight || now - s.lastTurn < ToiConfig.get().aiMinSecondsBetweenTurns * 1000 || !takeSlot(now)) {
             // keep the most important pending trigger: chat beats events
             if (s.pending == null || p.eventType == null || s.pending.eventType != null) s.pending = p;
@@ -143,6 +159,7 @@ public final class CompanionBrain {
         }
         s.inFlight = true;
         s.lastTurn = System.currentTimeMillis();
+        int gen = ++s.gen;
         AiBackend b = active();
         MinecraftServer srv = c.getServer();
         UUID id = c.getUUID();
@@ -153,11 +170,17 @@ public final class CompanionBrain {
             f = CompletableFuture.failedFuture(e);
         }
         f.whenComplete((reply, err) -> srv.execute(() -> {
+            if (s.gen != gen) return; // cancelled or replaced: ignore, send no result report
             s.inFlight = false;
             s.lastTurn = System.currentTimeMillis();
             CompanionEntity live = find(srv, id);
-            if (live == null) return; // unloaded or dead: drop the reply
+            if (live == null) return; // unloaded or dead: drop the reply and its actions, send no result report
             AiReply r = reply;
+            Throwable root = err == null ? null : err.getCause() != null ? err.getCause() : err;
+            if (root instanceof KagrenacBackend.StaleTurnException) {
+                TradeOfImmersion.LOGGER.debug("Dropped a stale Kagrenac reply for {}: {}", live.name(), root.getMessage());
+                return;
+            }
             if (err != null) {
                 failed++;
                 Throwable cause = err.getCause() != null ? err.getCause() : err;
@@ -180,6 +203,8 @@ public final class CompanionBrain {
     private static void apply(CompanionEntity c, AiReply r, Pending p) {
         if (r.say() != null && !r.say().isBlank()) {
             c.say(r.say());
+            dev.yucktheslime.tradeofimmersion.voice.VoiceSync.spoke(c, KagrenacBackend.companionId(c.getUUID().toString()), r.say(),
+                    r.trace() == null ? "" : r.trace().requestId(), c.getGender());
             if (p.speaker != null && p.speaker.startsWith("villager:")) {
                 dev.yucktheslime.tradeofimmersion.villager.VillagerTalk.companionReplied(c, r.say(), r.actions().stream()
                         .anyMatch(a -> a.has("action") && a.get("action").getAsString().equals("talk_to_villager")));
@@ -189,8 +214,12 @@ public final class CompanionBrain {
             String id = resolveItemId(c, l.item());
             if (id != null) ItemKnowledgeStore.get().addNote(id, l.notes());
         }
-        if (r.actions().isEmpty()) return;
+        if (r.actions().isEmpty()) {
+            report(r, List.of());
+            return;
+        }
         List<ActionExecutor.Result> results = ActionExecutor.run(c, r.actions());
+        report(r, results);
         boolean interesting = results.stream().anyMatch(x -> !x.ok() || x.action().equals("inspect_item"));
         if (interesting && p.depth == 0) {
             String text = "[result] " + results.stream().map(ActionExecutor.Result::toString).collect(Collectors.joining(" | "));
@@ -199,6 +228,56 @@ public final class CompanionBrain {
             // follow-ups run as soon as the gap allows (via tick)
             if (s.pending == null || s.pending.eventType != null) s.pending = follow;
         }
+    }
+
+    /**
+     * result.php: what the game did with each action the Kagrenac server returned. "handled" means our handler
+     * ran and accepted the order (the outcome, such as arriving, is logged later as an action_result event).
+     */
+    private static void report(AiReply r, List<ActionExecutor.Result> results) {
+        if (r.trace() == null || !(backend instanceof KagrenacBackend k)) return;
+        Map<String, String[]> outcomes = new java.util.LinkedHashMap<>();
+        List<ActionExecutor.Result> left = new java.util.ArrayList<>(results);
+        for (var a : r.actions()) {
+            if (!a.has("_proto")) continue;
+            String proto = a.get("_proto").getAsString();
+            String mod = a.get("action").getAsString();
+            ActionExecutor.Result match = null;
+            for (var x : left) {
+                if (x.action().equals(mod)) {
+                    match = x;
+                    break;
+                }
+            }
+            if (match == null) {
+                outcomes.put(proto, new String[]{"rejected", "same handler already used in this reply"});
+                continue;
+            }
+            left.remove(match);
+            String status = match.ok() ? "handled" : match.text().equals("not an allowed action") ? "rejected" : "failed";
+            outcomes.put(proto, new String[]{status, match.text()});
+        }
+        k.reportResults(r.trace(), outcomes);
+    }
+
+    /** The companion died or was removed: cancel its in-flight Kagrenac turn. */
+    public static void onCompanionGone(CompanionEntity c) {
+        State s = STATES.remove(c.getUUID());
+        if (s != null && s.inFlight && backend instanceof KagrenacBackend k) {
+            s.gen++;
+            k.cancel(KagrenacBackend.companionId(c.getUUID().toString()));
+        }
+    }
+
+    /** /npc ai cancel: drop what the companion is thinking about. */
+    public static boolean cancel(CompanionEntity c) {
+        State s = STATES.get(c.getUUID());
+        if (s == null || !s.inFlight) return false;
+        s.gen++;
+        s.inFlight = false;
+        s.pending = null;
+        if (backend instanceof KagrenacBackend k) k.cancel(KagrenacBackend.companionId(c.getUUID().toString()));
+        return true;
     }
 
     private static String resolveItemId(CompanionEntity c, String item) {

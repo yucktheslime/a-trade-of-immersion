@@ -136,6 +136,38 @@ public final class McaVillagerUtil {
                 List.copyOf(traits), hearts, playerName);
     }
 
+    /**
+     * MCA family in one line, from the family tree: partner (and whether married/engaged), parents, children.
+     * Empty when MCA has no entry. Cheap: one SavedData lookup per relative.
+     */
+    public static String family(VillagerEntityMCA v) {
+        try {
+            var node = v.getRelationships().getFamilyEntry();
+            if (node == null) return "";
+            var tree = node.getRoot();
+            java.util.function.Function<UUID, String> nameOf = id -> id == null || id.equals(net.minecraft.Util.NIL_UUID) ? null
+                    : tree.getOrEmpty(id).map(n -> n.getName()).filter(n -> n != null && !n.isBlank()).orElse(null);
+            List<String> parts = new ArrayList<>();
+            String partner = nameOf.apply(node.partner());
+            if (partner != null) {
+                String state = safe(() -> node.getRelationshipState().name().toLowerCase(Locale.ROOT).replace('_', ' '), "");
+                parts.add((state.isEmpty() || state.equals("single") ? "partner " : state + " to ") + partner);
+            }
+            List<String> parents = new ArrayList<>();
+            for (UUID id : new UUID[]{node.father(), node.mother()}) {
+                String n = nameOf.apply(id);
+                if (n != null) parents.add(n);
+            }
+            if (!parents.isEmpty()) parts.add("child of " + String.join(" and ", parents));
+            List<String> kids = node.getChildren().map(nameOf).filter(java.util.Objects::nonNull).limit(5).toList();
+            if (!kids.isEmpty()) parts.add("parent of " + String.join(", ", kids));
+            return String.join("; ", parts);
+        } catch (Throwable t) {
+            TradeOfImmersion.LOGGER.debug("Could not read MCA family", t);
+            return "";
+        }
+    }
+
     /** Speak a line through MCA's own villager chat pipeline (MCA prefix + name, speech sound, players within 20 blocks). */
     public static void say(VillagerEntityMCA v, String line) {
         v.sendChatToAllAround(Component.literal(line));

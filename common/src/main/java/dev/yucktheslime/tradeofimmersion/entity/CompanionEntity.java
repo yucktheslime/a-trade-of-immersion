@@ -354,6 +354,8 @@ public class CompanionEntity extends PathfinderMob {
             lastDamageEventTick = level().getGameTime();
             String who = attacker.getName().getString();
             NpcMemoryStore.get().event(getUUID(), "damage", who + " hit you (" + Math.round(amount) + " damage, health " + Math.round(getHealth()) + "/" + Math.round(getMaxHealth()) + ")");
+            dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.event("npc_hurt", this, who + " hit " + name() + " (" + Math.round(amount)
+                    + " damage, health " + Math.round(getHealth()) + "/" + Math.round(getMaxHealth()) + ")");
             if (attacker instanceof Player && ToiConfig.get().reactToEvents) {
                 CompanionBrain.onEvent(this, "combat_started", who + " just hit you.");
             }
@@ -389,6 +391,7 @@ public class CompanionEntity extends PathfinderMob {
         if (!level().isClientSide) {
             Player owner = getOwner();
             if (owner instanceof ServerPlayer sp) sp.sendSystemMessage(Component.literal(name() + " died: ").append(source.getLocalizedDeathMessage(this)));
+            CompanionBrain.onCompanionGone(this);
         }
         super.die(source);
     }

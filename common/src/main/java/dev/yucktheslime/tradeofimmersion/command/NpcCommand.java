@@ -67,6 +67,30 @@ public final class NpcCommand {
                     CompanionBrain.reload();
                     c.getSource().sendSuccess(() -> Component.literal("Reloaded config. " + CompanionBrain.status()), true);
                     return 1;
+                }))
+                .then(Commands.literal("preset").requires(s -> s.hasPermission(2))
+                        .then(Commands.argument("preset", StringArgumentType.word())
+                                .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("kagrenac", "openrouter", "ollama", "mock"), b))
+                                .executes(NpcCommand::preset)))
+                .then(Commands.literal("cancel").then(npc().executes(c -> {
+                    CompanionEntity n = owned(c);
+                    boolean was = CompanionBrain.cancel(n);
+                    c.getSource().sendSuccess(() -> Component.literal(was ? "Cancelled " + n.name() + "'s turn." : n.name() + " was not thinking about anything."), false);
+                    return 1;
+                })))
+                .then(Commands.literal("bios").requires(s -> s.hasPermission(2)).executes(c -> {
+                    if (!(CompanionBrain.backend() instanceof KagrenacBackend k)) {
+                        c.getSource().sendFailure(Component.literal("Bios are pushed only with aiBackend \"kagrenac\"."));
+                        return 0;
+                    }
+                    if (!k.has("bio_sync")) {
+                        c.getSource().sendFailure(Component.literal("This Kagrenac server has no npc_bio.php (install the kagrenac-server/ folder of this mod)."));
+                        return 0;
+                    }
+                    dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.reset();
+                    int n = dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.syncBios(c.getSource().getServer(), k);
+                    c.getSource().sendSuccess(() -> Component.literal("Sending " + n + " bio(s) to Kagrenac (NPC bios page on its dashboard)."), false);
+                    return n;
                 })));
         root.then(Commands.literal("say").then(npc().then(Commands.argument("text", StringArgumentType.greedyString()).executes(c -> {
             CompanionEntity n = owned(c);
@@ -197,9 +221,36 @@ public final class NpcCommand {
         c.getSource().sendSuccess(() -> Component.literal(CompanionBrain.status()), false);
         if (CompanionBrain.backend() instanceof KagrenacBackend k) {
             var srv = c.getSource().getServer();
-            k.health().whenComplete((body, err) -> srv.execute(() -> c.getSource().sendSuccess(() ->
-                    Component.literal("Kagrenac health: " + (err != null ? "unreachable (" + err.getClass().getSimpleName() + ")" : body)), false)));
+            String token = ToiConfig.get().effectiveKagrenacToken().isBlank() ? "NOT SET (kagrenacToken or env TOI_KAGRENAC_TOKEN)" : "set";
+            k.refreshHealth().whenComplete((info, err) -> srv.execute(() -> c.getSource().sendSuccess(() ->
+                    Component.literal("Kagrenac " + ToiConfig.get().kagrenacBaseUrl + ": " + info + "; token " + token
+                            + "; session " + KagrenacBackend.session() + "; voice " + (ToiConfig.get().voiceEnabled ? "on" : "off")), false)));
         }
+        return 1;
+    }
+
+    /** Switches the AI preset and saves the config: kagrenac (CHIM-style server), openrouter, ollama or mock. */
+    private static int preset(CommandContext<CommandSourceStack> c) {
+        String p = StringArgumentType.getString(c, "preset").toLowerCase(java.util.Locale.ROOT);
+        ToiConfig cfg = ToiConfig.get();
+        switch (p) {
+            case "kagrenac" -> cfg.aiBackend = "kagrenac";
+            case "openrouter", "ollama" -> {
+                cfg.aiBackend = "openai";
+                cfg.aiPreset = p;
+                cfg.aiBaseUrl = "";
+                cfg.aiModel = "";
+            }
+            case "mock" -> cfg.aiBackend = "mock";
+            default -> {
+                c.getSource().sendFailure(Component.literal("Presets: kagrenac, openrouter, ollama, mock"));
+                return 0;
+            }
+        }
+        ToiConfig.save();
+        CompanionBrain.reload();
+        c.getSource().sendSuccess(() -> Component.literal("AI preset " + p + " saved. " + CompanionBrain.status()
+                + (p.equals("kagrenac") ? "\nRun /npc ai status to check the server." : "")), true);
         return 1;
     }
 }

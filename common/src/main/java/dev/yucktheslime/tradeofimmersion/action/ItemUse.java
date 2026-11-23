@@ -34,8 +34,9 @@ public final class ItemUse {
         ItemStack stack = c.getMainHandItem();
         if (stack.has(DataComponents.FOOD) && entityTarget == null && blockTarget == null) {
             ItemStack one = stack.split(1);
+            String food = one.getHoverName().getString(); // read before eating: eating empties the stack
             c.eatNow(one);
-            return "ate " + one.getHoverName().getString();
+            return "ate " + food;
         }
         ServerPlayer fp = FakePlayers.get(level, c.getUUID(), c.name());
         Vec3 look = entityTarget != null ? entityTarget.getEyePosition() : blockTarget;

@@ -12,8 +12,12 @@ import java.util.List;
  * What the AI wants the companion to do: a spoken line, actions, and item notes to remember.
  * Parsed leniently from model output ({@code {"say":..,"actions":[{"action":..,...}],"learn":[{"item":..,"notes":..}]}}).
  */
-public record AiReply(String say, List<JsonObject> actions, List<Learn> learn) {
+public record AiReply(String say, List<JsonObject> actions, List<Learn> learn, KagrenacTrace trace) {
     public record Learn(String item, String notes) {
+    }
+
+    public AiReply(String say, List<JsonObject> actions, List<Learn> learn) {
+        this(say, actions, learn, null);
     }
 
     public static AiReply text(String say) {

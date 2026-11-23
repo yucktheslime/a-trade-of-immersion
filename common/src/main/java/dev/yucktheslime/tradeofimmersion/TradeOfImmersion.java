@@ -39,6 +39,7 @@ public final class TradeOfImmersion {
         LOGGER.info("A Trade of Immersion initializing (enabled={}, backend={})", ToiConfig.get().enabled, ToiConfig.get().aiBackend);
         ModRegistry.init();
         CompanionBodySync.init();
+        dev.yucktheslime.tradeofimmersion.voice.VoiceSync.init();
         WorldEvents.init();
         CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
             CompanionBodyCommand.register(dispatcher);
@@ -67,5 +68,6 @@ public final class TradeOfImmersion {
             ItemKnowledgeStore.get().close();
         });
         TickEvent.SERVER_POST.register(CompanionBrain::tick);
+        TickEvent.SERVER_POST.register(dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld::tick);
     }
 }
