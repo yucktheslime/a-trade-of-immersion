@@ -2,7 +2,7 @@
 
 A **NeoForge** (primary) and Fabric compatibility mod for **Minecraft 1.21.1** that lets **Player2 AI companions** (Player2NPC / PlayerEngine) detect, approach, and talk with **Minecraft Comes Alive (MCA) Reborn** villagers. Villagers talk back, and both sides remember past conversations.
 
-> Status: **early alpha (0.1.2)**. It compiles against the real dependency jars (local build + CI), but it has **not been play-tested in game yet**. See [Known limitations](#known-limitations).
+> Status: **early alpha (0.1.3)**. It compiles against the real dependency jars (local build + CI), but it has **not been play-tested in game yet**. See [Known limitations](#known-limitations).
 
 ## Why
 
@@ -103,7 +103,7 @@ The config is at `config/mcaplayer2.json` and is created on first launch.
 | `companionGender` | `auto` | `auto` guesses from the Player2 character's description and greeting pronouns. `female`, `male` and `neutral` force a gender for all companions |
 | `companionGenderFallback` | `male` | Used when `auto` can't tell |
 | `companionGenderOverrides` | `{}` | Per character name, e.g. `{"Ellie": "female"}` |
-| `companionBreastSize` | `-1.0` | 0..1, or negative to use an MCA `Breast` gene seeded from the companion UUID |
+| `companionBreastSize` | `-1.0` | 0..1 for female companions. Negative uses the default `0.5`. `/mcaplayer2 body <c> breast` overrides it per companion |
 | `companionFlatWhenChestArmor` | `true` | Use the flat vanilla body while a chestplate is worn, so the breasts don't clip through armor |
 | `companionMcaBodyDisableIfModsLoaded` | `[]` | Mod ids that switch the feature off when loaded (e.g. `wildfire_gender`) |
 | `maxLogEntries` | `100` | Entries kept per villager log |
@@ -152,7 +152,35 @@ Traits map to MCA Reborn 7.7.36 `Genetics` genes (exact names):
 | `face` | `Face` | no | face texture |
 | `eye_brightness` | `EyeBrightness` | no | eyes |
 
+With **MCA: Female Gender Physics** installed (mod id `mcabp`), these traits are also available. They are that addon's own genes:
+
+| Trait | Addon gene | Effect |
+|---|---|---|
+| `separation` | `BreastSeparation` | Horizontal spacing |
+| `breast_height` | `BreastHeight` | Vertical position |
+| `depth` | `BreastDepth` | Forward offset |
+| `rotation` | `BreastRotation` | Outward angle (cleavage) |
+| `growth` | `BreastGrowth` | Size multiplier (0.5 = baseline) |
+
 Height and width are only applied once you set them, so unedited companions keep Player2NPC's size. The scale is visual only; the server hitbox does not change.
+
+### Compat: MCA: Female Gender Physics (optional)
+
+[MCA: Female Gender Physics](https://www.curseforge.com/minecraft/mc-mods/mca-female-gender-physics) (mod id `mcabp`) is supported. The bridge was checked against its NeoForge 1.21.1 V0.1.8 jar. The addon is optional: the bridge works with or without it.
+
+What the addon does (verified by decompiling it):
+- It turns MCA's own breast cubes off (`Config.enableBoobs = false`).
+- It adds its own `GenderLayer`, with spring physics, to MCA villager renderers. It also adds it to players when Wildfire's Female Gender Mod isn't installed.
+- It reads gender and genes through `EntityConfig.resolveVillagerLike`, which only knows villagers and players.
+- Because Player2 companions are neither, companions with the addon installed got no breasts at all: MCA's cubes were off and the addon skipped them.
+
+What the bridge does when `mcabp` is loaded:
+- Adds the addon's `GenderLayer` to Player2NPC's renderer.
+- Adds client mixins, applied only when the addon is present, that make the addon accept companions and resolve them to the companion's MCA record. Physics then ticks from the companion's own movement.
+- Textures the addon's breasts with the companion's skin (`player_skin`) or MCA's stitched villager skin (`mca_generated`).
+- Gives the addon's genes neutral defaults.
+
+There is no double drawing: the addon has already disabled MCA's cubes, so only the addon's breasts render. The addon's client config (`mcabp-client.toml`) controls physics, bounce, and armor behavior for companions too.
 
 **MCA's own editor does not work on companions** (verified in MCA 7.7.36):
 - `/mca editor` only opens the editor for yourself (`OpenGuiRequest(VILLAGER_EDITOR, player)`).
@@ -164,7 +192,8 @@ Height and width are only applied once you set them, so unedited companions keep
 - **Armor:** while a chestplate is worn, the flat vanilla body is used (`companionFlatWhenChestArmor`). MCA's breast-shaped armor model (`PlayerArmorExtendedModel`) is not applied to companions.
 - **Capes and elytra:** these stay vanilla.
 - **First person:** not relevant, since companions are only seen in third person.
-- **Breast physics:** there is none. MCA's breasts are static. Wildfire's Female Gender Mod (`wildfire_gender`) renders players only, so it neither affects nor conflicts with companions. Add it to `companionMcaBodyDisableIfModsLoaded` if you want companions left alone.
+- **Breast physics:** only with MCA: Female Gender Physics (see above). MCA's own breasts are static. Wildfire's original Female Gender Mod (`wildfire_gender`) renders players only, so companions aren't affected by it.
+- **Fixed in 0.1.3:** in 0.1.2, companions looked like scaled-up MCA children and had no breasts. The client-side MCA record was created without MCA's spawn initialization, so its age state stayed `UNASSIGNED` and MCA interpolated its dimensions toward `BABY`: head 1.5x, breasts 0. Records are now created as adults (`setAge(0)`, which sets `AgeState.ADULT` and adult dimensions). Height now comes only from the `Size` gene.
 - **MCA player-model setting:** MCA's `enableVillagerPlayerModel` and `playerRendererBlacklist` only gate MCA's player renderer. They don't affect companions; use `companionMcaBody`.
 - **Untested in game:** this has only been tested in the dev environment. The mixin applies, and the client reaches the menu without errors.
 - **Fabric:** the feature is NeoForge-only. The Fabric build has no renderer mixin, but the commands and sync are there.

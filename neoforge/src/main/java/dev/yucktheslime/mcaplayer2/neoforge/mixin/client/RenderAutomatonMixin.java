@@ -73,6 +73,9 @@ public abstract class RenderAutomatonMixin extends LivingEntityRenderer<Automato
                 var mcaParts = LayerDefinition.create(VillagerEntityModelMCA.bodyData(CubeDeformation.NONE), 64, 64).bakeRoot();
                 this.mcaplayer2$mcaModel = new PlayerEntityExtendedModel<>(ctx.bakeLayer(ModelLayers.PLAYER), false, mcaParts);
             }
+            if (dev.yucktheslime.mcaplayer2.neoforge.compat.McabpPresence.loaded()) {
+                dev.yucktheslime.mcaplayer2.neoforge.compat.FemaleGenderPhysicsCompat.addLayer(this, ctx);
+            }
             dev.yucktheslime.mcaplayer2.McaPlayer2Bridge.LOGGER.info("[mcaplayer2] MCA body model ready for Player2 companions (appearance={})",
                     mcaplayer2$generated ? "mca_generated" : "player_skin");
         } catch (Throwable t) {

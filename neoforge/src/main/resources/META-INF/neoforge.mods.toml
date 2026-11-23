@@ -19,6 +19,10 @@ config = "mcaplayer2.mixins.json"
 [[mixins]]
 config = "mcaplayer2.neoforge.mixins.json"
 
+# Optional client compat with "MCA: Female Gender Physics" (mcabp); a mixin plugin skips it when that mod is absent.
+[[mixins]]
+config = "mcaplayer2.mcabp.mixins.json"
+
 [[dependencies.mcaplayer2]]
 modId = "neoforge"
 type = "required"
@@ -60,3 +64,10 @@ type = "optional"
 versionRange = "[1.21.1-1.4.0,)"
 ordering = "NONE"
 side = "BOTH"
+
+[[dependencies.mcaplayer2]]
+modId = "mcabp"
+type = "optional"
+versionRange = "[0.1.8,)"
+ordering = "NONE"
+side = "CLIENT"

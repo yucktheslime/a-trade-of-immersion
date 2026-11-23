@@ -10,6 +10,9 @@ import dev.yucktheslime.mcaplayer2.config.BridgeConfig;
 import net.conczin.mca.MCAClient;
 import net.conczin.mca.entity.VillagerEntityMCA;
 import net.conczin.mca.entity.ai.Genetics;
+import net.conczin.mca.entity.ai.relationship.AgeState;
+import dev.yucktheslime.mcaplayer2.neoforge.compat.FemaleGenderPhysicsCompat;
+import dev.yucktheslime.mcaplayer2.neoforge.compat.McabpPresence;
 import net.conczin.mca.entity.ai.relationship.Gender;
 import net.conczin.mca.registry.EntitiesMCA;
 import net.minecraft.resources.ResourceLocation;
@@ -42,6 +45,8 @@ public final class CompanionBodyClient {
     private static final Pattern MALE = Pattern.compile("\\b(he|him|his|himself|man|boy|guy|male|king|prince|father|brother|husband)\\b");
 
     private static final Map<UUID, Entry> CACHE = new HashMap<>();
+    /** Breast gene used when companionBreastSize is negative. */
+    private static final float DEFAULT_BREAST = 0.5f;
     /** MCA Genetics.GeneType name -> type (names verified in MCA 7.7.36's Genetics). */
     private static final Map<String, Genetics.GeneType> GENE_TYPES = Map.of(
             "Size", Genetics.SIZE, "Width", Genetics.WIDTH, "Breast", Genetics.BREAST, "Melanin", Genetics.MELANIN,
@@ -76,6 +81,13 @@ public final class CompanionBodyClient {
         return "mca_generated".equalsIgnoreCase(BridgeConfig.get().companionAppearance);
     }
 
+    /** The client-side MCA villager record backing this companion (null if the feature is off). */
+    public static VillagerEntityMCA villagerFor(net.minecraft.world.entity.LivingEntity e) {
+        if (!(e instanceof AutomatoneEntity a) || !featureEnabled()) return null;
+        Entry entry = ensure(a);
+        return entry == null ? null : entry.villager;
+    }
+
     /** Whether this companion should currently use the MCA body (as opposed to the vanilla player model). */
     public static boolean useMcaBody(AutomatoneEntity e) {
         if (!featureEnabled()) return false;
@@ -105,6 +117,13 @@ public final class CompanionBodyClient {
         try {
             VillagerEntityMCA v = (gender == Gender.FEMALE ? EntitiesMCA.FEMALE_VILLAGER : EntitiesMCA.MALE_VILLAGER).create(level);
             if (v == null) return null;
+            // Root cause of the 0.1.2 "scaled-up child" look and missing breasts: an entity made with
+            // EntityType.create() never runs finalizeSpawn(), so AgeState stays UNASSIGNED and MCA's
+            // refreshDimensions() interpolates UNASSIGNED -> BABY with the default GrowthAmount (-maxAge),
+            // giving BABY dimensions (head 1.5x, breasts 0). setAge(0) = adult: AgeState.ADULT, dimensions ADULT.
+            v.setAge(0);
+            v.setAgeState(AgeState.ADULT);
+            v.refreshDimensions();
             Genetics g = v.getGenetics();
             g.setGender(gender);
             Random r = new Random(id.getMostSignificantBits() ^ id.getLeastSignificantBits());
@@ -113,11 +132,13 @@ public final class CompanionBodyClient {
                 g.setGene(type, r.nextFloat());
             }
             double breast = BridgeConfig.get().companionBreastSize;
-            if (breast >= 0) g.setGene(Genetics.BREAST, (float) Math.min(1.0, breast));
+            g.setGene(Genetics.BREAST, breast >= 0 ? (float) Math.min(1.0, breast) : DEFAULT_BREAST);
+            if (McabpPresence.loaded()) FemaleGenderPhysicsCompat.applyDefaultGenes(g);
             CompanionBodyData edits = ClientCompanionBodies.get(id);
             if (edits != null) {
                 edits.genes.forEach((name, value) -> {
                     Genetics.GeneType type = GENE_TYPES.get(name);
+                    if (type == null && McabpPresence.loaded()) type = FemaleGenderPhysicsCompat.geneType(name);
                     if (type != null) g.setGene(type, Math.max(0f, Math.min(1f, value)));
                 });
             }
@@ -128,6 +149,11 @@ public final class CompanionBodyClient {
                 } catch (Throwable t) {
                     McaPlayer2Bridge.LOGGER.debug("MCA hair/clothes randomization unavailable on this client", t);
                 }
+            }
+            var dims = v.getVillagerDimensions();
+            if (dims.getHead() != 1.0f || dims.getBreasts() != 1.0f) {
+                McaPlayer2Bridge.LOGGER.warn("[mcaplayer2] Companion MCA data is not adult-sized (head={}, breasts={}, age={})",
+                        dims.getHead(), dims.getBreasts(), v.getAgeState());
             }
             return new Entry(v, gender, rev);
         } catch (Throwable t) {

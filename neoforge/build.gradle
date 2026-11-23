@@ -32,6 +32,13 @@ dependencies {
     modCompileOnly "maven.modrinth:player2npc:${rootProject.player2npc_neoforge_version}"
     modLocalRuntime "maven.modrinth:player2npc:${rootProject.player2npc_neoforge_version}"
 
+    // Optional soft dependency: "MCA: Female Gender Physics" (mod id mcabp). Compile-only + dev runtime;
+    // all code touching it is behind ModList checks / a mixin plugin, so it is never required.
+    modCompileOnly "curse.maven:mca-female-gender-physics-1710127:${rootProject.mcabp_neoforge_file}"
+    if (!project.hasProperty("noMcabp")) { // ./gradlew :neoforge:runClient -PnoMcabp tests without the addon
+        modLocalRuntime "curse.maven:mca-female-gender-physics-1710127:${rootProject.mcabp_neoforge_file}"
+    }
+
     common(project(path: ":common", configuration: "namedElements")) { transitive = false }
     shadowBundle project(path: ":common", configuration: "transformProductionNeoForge")
 }

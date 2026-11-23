@@ -50,6 +50,24 @@ public final class CompanionBodyCommand {
         GENES.put("eye_brightness", "EyeBrightness");
     }
 
+    /** Extra genes added by "MCA: Female Gender Physics" (mod id mcabp); names verified in its MCAVillagerGenes. */
+    public static final Map<String, String> ADDON_GENES = new LinkedHashMap<>();
+
+    static {
+        ADDON_GENES.put("separation", "BreastSeparation");
+        ADDON_GENES.put("breast_height", "BreastHeight");
+        ADDON_GENES.put("depth", "BreastDepth");
+        ADDON_GENES.put("rotation", "BreastRotation");
+        ADDON_GENES.put("growth", "BreastGrowth");
+    }
+
+    private static Map<String, String> availableGenes() {
+        if (!dev.architectury.platform.Platform.isModLoaded("mcabp")) return GENES;
+        Map<String, String> all = new LinkedHashMap<>(GENES);
+        all.putAll(ADDON_GENES);
+        return all;
+    }
+
     private static final SimpleCommandExceptionType NO_COMPANION =
             new SimpleCommandExceptionType(Component.literal("No loaded Player2 companion with that name or UUID."));
 
@@ -76,7 +94,7 @@ public final class CompanionBodyCommand {
                         .executes(CompanionBodyCommand::show)
                         .then(Commands.literal("reset").executes(CompanionBodyCommand::reset))
                         .then(Commands.argument("gene", StringArgumentType.word())
-                                .suggests((c, b) -> SharedSuggestionProvider.suggest(GENES.keySet(), b))
+                                .suggests((c, b) -> SharedSuggestionProvider.suggest(availableGenes().keySet(), b))
                                 .then(Commands.argument("value", FloatArgumentType.floatArg(0f, 1f))
                                         .executes(CompanionBodyCommand::setGene))))));
     }
@@ -91,6 +109,16 @@ public final class CompanionBodyCommand {
             if (e == null) continue;
             String n = CompanionAdapter.name(d);
             if (n.equalsIgnoreCase(arg) || e.getUUID().toString().equalsIgnoreCase(arg)) return new Target(e.getUUID(), n);
+        }
+        // Fallback: any loaded Player2NPC entity (e.g. one without an active PlayerEngine conversation).
+        for (net.minecraft.server.level.ServerLevel level : ctx.getSource().getServer().getAllLevels()) {
+            for (net.minecraft.world.entity.Entity e : level.getAllEntities()) {
+                if (!(e instanceof LivingEntity)) continue;
+                var key = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getType());
+                if (!"player2npc".equals(key.getNamespace())) continue;
+                String n = e.getName().getString();
+                if (n.equalsIgnoreCase(arg) || e.getUUID().toString().equalsIgnoreCase(arg)) return new Target(e.getUUID(), n);
+            }
         }
         throw NO_COMPANION.create();
     }
@@ -118,9 +146,11 @@ public final class CompanionBodyCommand {
     private static int setGene(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         Target t = resolve(ctx);
         String token = StringArgumentType.getString(ctx, "gene").toLowerCase(Locale.ROOT);
-        String gene = GENES.get(token);
+        String gene = availableGenes().get(token);
         if (gene == null) {
-            ctx.getSource().sendFailure(Component.literal("Unknown trait '" + token + "'. Use one of: " + String.join(", ", GENES.keySet())));
+            String hint = ADDON_GENES.containsKey(token) ? " (needs MCA: Female Gender Physics)" : "";
+            ctx.getSource().sendFailure(Component.literal("Unknown trait '" + token + "'" + hint + ". Use one of: "
+                    + String.join(", ", availableGenes().keySet())));
             return 0;
         }
         float v = FloatArgumentType.getFloat(ctx, "value");

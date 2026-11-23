@@ -36,6 +36,17 @@ subprojects {
                 includeGroup "maven.modrinth"
             }
         }
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = "CurseMaven"
+                    url = "https://cursemaven.com"
+                }
+            }
+            filter {
+                includeGroup "curse.maven"
+            }
+        }
     }
 
     loom {
