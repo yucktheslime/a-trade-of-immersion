@@ -3,6 +3,8 @@ package dev.yucktheslime.mcaplayer2.bridge;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.player2.playerengine.player2api.AgentConversationData;
+import dev.yucktheslime.mcaplayer2.player2.CompanionAdapter;
 import dev.yucktheslime.mcaplayer2.McaPlayer2Bridge;
 import dev.yucktheslime.mcaplayer2.config.BridgeConfig;
 import dev.yucktheslime.mcaplayer2.util.VillagerProfile;
@@ -20,7 +22,10 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Produces the villager's side of the dialogue.
  *
- * <p>Primary path: the Player2 desktop app's local, OpenAI-style endpoint
+ * <p>Default path ({@code villagerReplyBackend = "playerengine"}): PlayerEngine's own Player2 client, billed to
+ * the companion's owner (see {@link CompanionAdapter#ownerBilledChatCompletion}).
+ *
+ * <p>Optional path ({@code "local_app"}): the Player2 desktop app's local, OpenAI-style endpoint
  * {@code POST {player2ApiUrl}/v1/chat/completions} with header {@code player2-game-key}
  * (documented at https://blog.player2.game/p/building-ai-npcs-with-player2-api and used by
  * Player2's own ChatClef reference mod). The villager persona comes from MCA data, the input is the
@@ -30,27 +35,35 @@ import java.util.concurrent.ThreadLocalRandom;
  * canned lines picked by mood and relationship, so the villager still responds.
  */
 public final class VillagerReplyGenerator {
+    private static final java.util.concurrent.ExecutorService EXECUTOR = java.util.concurrent.Executors.newFixedThreadPool(2, r -> {
+        Thread t = new Thread(r, "mcaplayer2-villager-llm");
+        t.setDaemon(true);
+        return t;
+    });
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
 
     private VillagerReplyGenerator() {
     }
 
-    public static CompletableFuture<String> greeting(VillagerProfile v, String companionName, List<String> history, List<String> surroundings) {
+    public static CompletableFuture<String> greeting(AgentConversationData companion, VillagerProfile v, String companionName, List<String> history, List<String> surroundings) {
         String instruction = companionName + ", an adventurer travelling with " + ownerOrSomeone(v)
                 + ", has just walked up to you. Greet them in one short line"
                 + (history.isEmpty() ? "." : ", remembering your earlier conversations if it fits.");
-        return generate(v, companionName, history, surroundings, instruction, () -> fallbackGreeting(v, companionName, !history.isEmpty()));
+        return generate(companion, v, companionName, history, surroundings, instruction, () -> fallbackGreeting(v, companionName, !history.isEmpty()));
     }
 
-    public static CompletableFuture<String> reply(VillagerProfile v, String companionName, List<String> history, String companionLine, List<String> surroundings) {
+    public static CompletableFuture<String> reply(AgentConversationData companion, VillagerProfile v, String companionName, List<String> history, String companionLine, List<String> surroundings) {
         String instruction = companionName + " says to you: \"" + companionLine + "\"\nReply in character with one short line.";
-        return generate(v, companionName, history, surroundings, instruction, () -> fallbackReply(v, companionName));
+        return generate(companion, v, companionName, history, surroundings, instruction, () -> fallbackReply(v, companionName));
     }
 
-    private static CompletableFuture<String> generate(VillagerProfile v, String companionName, List<String> history,
+    private static CompletableFuture<String> generate(AgentConversationData companion, VillagerProfile v, String companionName, List<String> history,
                                                       List<String> surroundings, String instruction, java.util.function.Supplier<String> fallback) {
         BridgeConfig cfg = BridgeConfig.get();
-        if (!cfg.useLlmForVillagerReplies) return CompletableFuture.completedFuture(fallback.get());
+        String backend = cfg.villagerReplyBackend == null ? "playerengine" : cfg.villagerReplyBackend.trim().toLowerCase();
+        if (!cfg.useLlmForVillagerReplies || backend.equals("canned") || BridgeCircuitBreaker.isOpen()) {
+            return CompletableFuture.completedFuture(fallback.get());
+        }
 
         String system = "You are " + v.name() + ", a villager in a Minecraft village (Minecraft Comes Alive). "
                 + v.describe()
@@ -60,6 +73,18 @@ public final class VillagerReplyGenerator {
                 + cfg.villagerReplyMaxWords + " words."
                 + (surroundings.isEmpty() ? "" : "\n" + String.join("\n", surroundings))
                 + (history.isEmpty() ? "" : "\nYour previous conversations with " + companionName + ":\n" + String.join("\n", history));
+
+        if (!backend.equals("local_app")) {
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    return clean(CompanionAdapter.ownerBilledChatCompletion(companion, system, instruction), v.name());
+                } catch (Throwable t) {
+                    if (BridgeCircuitBreaker.isBillingFailure(t)) BridgeCircuitBreaker.trip("villager reply: " + t.getMessage());
+                    else McaPlayer2Bridge.LOGGER.debug("Villager reply via PlayerEngine failed, using fallback: {}", t.toString());
+                    return fallback.get();
+                }
+            }, EXECUTOR).thenApply(s -> s == null || s.isBlank() ? fallback.get() : s);
+        }
 
         JsonObject body = new JsonObject();
         JsonArray messages = new JsonArray();
@@ -82,7 +107,13 @@ public final class VillagerReplyGenerator {
         }
         return HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                 .thenApply(resp -> {
-                    if (resp.statusCode() != 200) throw new IllegalStateException("HTTP " + resp.statusCode());
+                    if (resp.statusCode() != 200) {
+                        String err = "HTTP " + resp.statusCode();
+                        if (BridgeCircuitBreaker.isBillingFailureText(err) || BridgeCircuitBreaker.isBillingFailureText(resp.body())) {
+                            BridgeCircuitBreaker.trip("local Player2 app: " + err);
+                        }
+                        throw new IllegalStateException(err);
+                    }
                     JsonObject json = JsonParser.parseString(resp.body()).getAsJsonObject();
                     String content = json.getAsJsonArray("choices").get(0).getAsJsonObject()
                             .getAsJsonObject("message").get("content").getAsString();

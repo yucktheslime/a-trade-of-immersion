@@ -26,7 +26,7 @@ This bridge connects the two in both directions.
 
 ## Requirements
 
-1. **The Player2 desktop app must be installed, running, and signed in** on the machine running Minecraft (https://player2.game). Player2NPC/PlayerEngine use it for the companion's LLM and TTS. This bridge also calls its local API (`http://127.0.0.1:4315/v1/chat/completions`) to write villager replies.
+1. **The Player2 desktop app must be installed, running, and signed in** on the machine running Minecraft (https://player2.game). Your account needs available credit. Player2NPC/PlayerEngine use it for the companion's LLM and TTS. By default, villager replies are also generated through PlayerEngine's Player2 client and billed to the companion's owner, so each villager line costs one extra LLM request.
 2. Mods for **NeoForge 1.21.1**. These are the exact versions the bridge is built against:
 
 | Mod | Version | Link |
@@ -82,8 +82,11 @@ The config is at `config/mcaplayer2.json` and is created on first launch.
 | `talkIdleTimeoutTicks` | `600` | The talk goal ends after this much silence |
 | `talkMaxDurationTicks` | `2400` | Hard cap on the talk goal |
 | `villagerLooksAtCompanion` | `true` | Villager turns its head to face the companion during a conversation |
+| `villagerReplyBackend` | `playerengine` | Where villager lines come from. `playerengine` goes through PlayerEngine's own Player2 client and is billed to the companion's owner, the same way as the companion. `local_app` calls the Player2 desktop app directly at `player2ApiUrl`. `canned` uses built-in lines and no AI. |
+| `billingFailureCooldownSeconds` | `300` | After a billing, auth or quota failure, pause all bridge-triggered AI requests for this long |
+| `maxBridgeCompanionTurnsPerMinute` | `6` | Global cap on companion AI turns the bridge triggers (0 = unlimited) |
 | `useLlmForVillagerReplies` | `true` | Use the Player2 app for villager lines. When off or unreachable, canned lines are used. |
-| `player2ApiUrl` | `http://127.0.0.1:4315` | Player2 app local API |
+| `player2ApiUrl` | `http://127.0.0.1:4315` | Player2 app local API (only used with `local_app`) |
 | `player2GameKey` | `mca-player2-bridge` | Value of the `player2-game-key` header |
 | `llmTimeoutSeconds` | `20` | HTTP timeout for villager replies |
 | `villagerReplyMaxWords` | `30` | Length limit for villager replies |
@@ -179,15 +182,26 @@ Build tooling:
 
 Dependencies come from the Modrinth Maven (`maven.modrinth:<slug>:<version-id>`), maven.neoforged.net, the Fabric Maven, and the Architectury Maven. You can run a dev server with `./gradlew :neoforge:runServer`.
 
+## Billing and the circuit breaker
+
+Every AI request the bridge causes is billed to the **companion's owner**:
+
+- Villager lines are delivered to the companion as PlayerEngine info events, not as chat from a player. PlayerEngine bills the last *player* who spoke to a companion, so a villager name would match no one and the request would fail.
+- Villager replies go through PlayerEngine's own Player2 transport, billed to the owner.
+
+If a billing, auth or quota problem shows up, the bridge stops making requests for `billingFailureCooldownSeconds`. That covers PlayerEngine's "no billing player/token" error, HTTP 401, 402, 403 or 429, budget limits, and PlayerEngine reporting that no one can pay. Meanwhile villagers use canned lines and nothing is forwarded to companions. One warning goes to the server log, and nothing is sent to chat. Bridge-triggered companion turns are also capped by `maxBridgeCompanionTurnsPerMinute`.
+
+PlayerEngine's own messages are never hidden. The bridge only observes `AgentSideEffects.onError` to know when to back off.
+
 ## Known limitations
 
 - **Not play-tested yet.** On NeoForge, a dedicated dev server (`:neoforge:runServer`) with MCA, PlayerEngine, and Player2NPC loads the bridge without errors. On startup the bridge writes its config and opens the world memory directory. Companion/villager conversations have not been tested in game: timing, prompt quality, and PlayerEngine's turn gating are unverified.
 - **Hearts are per player, not per companion.** MCA stores hearts per player UUID, and companions aren't players. The bridge reports the villager's hearts toward the **companion's owner**. It does not change MCA hearts.
-- **Villager replies need the Player2 app on the server machine.** Villager lines are generated server-side through `127.0.0.1:4315`. That works in singleplayer or on a server hosted on the same PC. On a dedicated server without the Player2 app, villagers fall back to short canned lines. Companions themselves still work, because PlayerEngine handles them.
+- **Villager replies cost Player2 credit.** With the default `playerengine` backend they use the owner's Player2 credit through PlayerEngine's transport. That bypasses PlayerEngine's per-call budget counters, but the bridge's own rate limit and circuit breaker still apply. To spend no extra credit, set `villagerReplyBackend` to `canned`.
 - **Villagers speak through MCA's chat pipeline, not its dialogue trees.** Lines go through MCA's `sendChatToAllAround` (MCA chat prefix, speech sound, players within 20 blocks). They are not added to MCA's interaction/dialogue GUI, and MCA's own chatAI module is not involved.
 - **Command registration timing.** Commands are added at the end of `PlayerEngineCommands.init`. If PlayerEngine builds a companion's system prompt before then, the new commands may only appear in that prompt after the companion is respawned or reloaded. The mixins use `require = 0`, so if a future PlayerEngine renames the hooks, the bridge degrades silently instead of crashing. Check the log.
 - **Companion speech reaches villagers through a mixin** into `ConversationManager.onAICharacterMessage`, an internal PlayerEngine method, not a public API. It may break on PlayerEngine updates.
-- **Villager lines arrive as chat messages.** They are fed to the companion as `Event.UserMessage` with the speaker set to `"<Name> (MCA villager)"`. PlayerEngine may treat that speaker as a non-owner user, so blacklist/whitelist settings in Player2NPC can affect it.
+- **Villager lines arrive as info events** (`Info: Alice (MCA villager) says to you: "..."`), not as chat from a user. The companion's reply prompt therefore has no "last message was from …" hint.
 - **Companion identity in memory** is keyed by the Player2 character name, because companion entity UUIDs can change on respawn. Two companions with the same name share history.
 - **Owned-entity detection is best effort.** The NBT fallback calls `saveWithoutId` on nearby entities when a conversation opens. That costs some performance in mob-dense areas; turn it off with `ownerNbtFallback: false`. Pet mods that store ownership under an unusual key or a deeper object need an `ownerNbtKeys` or `ownerAccessorMethods` entry, or a registered `OwnerUuidResolver`.
 - **Common code is compiled against the Fabric builds** of PlayerEngine and MCA. That's the normal Architectury setup, and `javap` shows the same class and method names in the NeoForge jars. The NeoForge module then compiles against the NeoForge jars. Keep the two loaders' dependency versions in step.

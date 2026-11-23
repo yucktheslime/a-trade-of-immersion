@@ -45,7 +45,17 @@ public final class BridgeConfig {
 
     /** Generate villager lines with the Player2 app's local LLM endpoint; otherwise use canned lines. */
     public boolean useLlmForVillagerReplies = true;
-    /** Base URL of the Player2 desktop app's local API. */
+    /**
+     * Where villager lines are generated: {@code "playerengine"} (default; PlayerEngine's own Player2 client,
+     * billed to the companion's owner like the companion itself), {@code "local_app"} (direct call to the Player2
+     * desktop app at {@link #player2ApiUrl}) or {@code "canned"} (no AI, built-in lines).
+     */
+    public String villagerReplyBackend = "playerengine";
+    /** After a billing/auth/quota failure, pause all bridge-triggered AI requests for this long (seconds). */
+    public int billingFailureCooldownSeconds = 300;
+    /** Global cap on companion LLM turns the bridge may trigger (villager lines + greetings) per minute. 0 = unlimited. */
+    public int maxBridgeCompanionTurnsPerMinute = 6;
+    /** Base URL of the Player2 desktop app's local API (only for villagerReplyBackend = "local_app"). */
     public String player2ApiUrl = "http://127.0.0.1:4315";
     /** Value of the {@code player2-game-key} header sent to the Player2 app. */
     public String player2GameKey = "mca-player2-bridge";

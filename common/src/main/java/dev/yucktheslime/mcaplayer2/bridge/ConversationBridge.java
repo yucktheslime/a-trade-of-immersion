@@ -48,6 +48,7 @@ public final class ConversationBridge {
     }
 
     public void reset() {
+        BridgeCircuitBreaker.reset();
         exchanges.clear();
         tickCounter = 0;
     }
@@ -81,6 +82,7 @@ public final class ConversationBridge {
                 if (!McaVillagerUtil.canTalk(v)) continue;
                 Exchange ex = exchange(companion, v);
                 if (ex.lastGreetTick != Long.MIN_VALUE && now - ex.lastGreetTick < cfg.greetCooldownTicks) continue;
+                if (BridgeCircuitBreaker.isOpen() || !CompanionAdapter.canBill(companion)) break;
                 beginConversation(companion, v, false);
                 break; // at most one new greeting per companion per scan
             }
@@ -115,7 +117,7 @@ public final class ConversationBridge {
 
         if (!McaVillagerUtil.canTalk(villager)) return;
         MinecraftServer server = ce.getServer();
-        VillagerReplyGenerator.greeting(profile, companionName, history, OwnedCompanionContextProvider.INSTANCE.villagerOwnLines(villager))
+        VillagerReplyGenerator.greeting(companion, profile, companionName, history, OwnedCompanionContextProvider.INSTANCE.villagerOwnLines(villager))
                 .thenAccept(line -> runOnServer(server, () -> villagerSpeaks(companion, villager, line, now)));
     }
 
@@ -174,7 +176,7 @@ public final class ConversationBridge {
         List<String> history = ConversationMemoryStore.get().recentLines(target.getUUID(), companionName, cfg.historyLinesInPrompt);
         VillagerEntityMCA v = target;
         MinecraftServer server = ce.getServer();
-        VillagerReplyGenerator.reply(profile, companionName, history, message, OwnedCompanionContextProvider.INSTANCE.villagerOwnLines(v))
+        VillagerReplyGenerator.reply(companion, profile, companionName, history, message, OwnedCompanionContextProvider.INSTANCE.villagerOwnLines(v))
                 .thenAccept(line -> runOnServer(server, () -> villagerSpeaks(companion, v, line, now)));
     }
 
@@ -200,7 +202,17 @@ public final class ConversationBridge {
         Exchange ex = exchange(companion, villager);
         ex.turns++;
         ex.lastActivityTick = now;
-        // Feed the villager's words to the companion's LLM as an incoming message.
+        // Feed the villager's words to the companion's LLM (starts a companion turn) - guarded so we never make
+        // PlayerEngine retry a request nobody can pay for.
+        if (BridgeCircuitBreaker.isOpen()) return;
+        if (!CompanionAdapter.canBill(companion)) {
+            BridgeCircuitBreaker.trip("PlayerEngine has no billing player for companion " + cName);
+            return;
+        }
+        if (!BridgeCircuitBreaker.tryAcquireCompanionTurn()) {
+            McaPlayer2Bridge.LOGGER.debug("Bridge companion-turn rate limit reached; not forwarding {}'s line", vName);
+            return;
+        }
         CompanionAdapter.deliverSpeech(companion, vName + " (MCA villager)", line);
     }
 
