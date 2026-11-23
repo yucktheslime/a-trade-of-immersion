@@ -21,6 +21,7 @@ This bridge connects the two in both directions.
 | Villagers start conversations | A server-tick listener notices companions within `detectionRadius` of an MCA villager. The villager greets the companion through MCA's own villager chat (`Messenger#sendChatToAllAround`), then turns its head to face the companion. | `bridge/ConversationBridge` |
 | Villagers answer | A mixin captures every line a companion speaks. If a nearby villager is addressed by name, or is already talking with that companion, it answers. The answer is generated from the companion's words, the villager's MCA persona, and the shared memory. It goes out through MCA chat and comes back to the companion as an incoming message, so the companion's LLM replies. | `mixin/`, `bridge/VillagerReplyGenerator` |
 | Memory | Each villager gets a JSON conversation log in the world save, which both sides read across sessions. | `memory/ConversationMemoryStore` |
+| Companion Pokémon party (optional) | If **Cobblemon 1.7.3** is installed, each Player2 companion has its own persistent party (not the owner's). The LLM can call `pokemon_party` to read species, level, HP, types, moves and remaining PP, ability, and held item. The same summary is injected into the companion's prompt when it comes online and when a villager conversation opens. A debug command can gift a test Pokémon. The bridge still loads if Cobblemon is missing. | `cobblemon/` |
 | Tamed companions / owned animals | When a conversation opens, nearby living entities are checked for an owner UUID. Each owner is resolved to an MCA villager (or a player), and the companion is told things like *This wolf "Rex" is a tamed companion belonging to the villager Alice.* Villagers are told about their own tamed companions nearby. This works with vanilla tameables and with modded pets through pluggable resolvers. | `util/OwnedEntityUtil`, `util/OwnerUuidResolver`, `context/` |
 | Loop guard | Each companion/villager pair is limited to `maxTurnsPerConversation` villager lines per conversation, and greetings have a cooldown, so two AIs can't chat forever. | `bridge/ConversationBridge` |
 
@@ -37,6 +38,9 @@ This bridge connects the two in both directions.
 | Player2NPC (NeoForge) | 1.21.1-1.4.0-NeoForge | https://modrinth.com/mod/player2npc/version/6hUQg8ap |
 | MCA Reborn (NeoForge) | 7.7.36+1.21.1 | https://modrinth.com/mod/minecraft-comes-alive-reborn/version/S2Ln2tIn |
 | MCA-Player2 Bridge | `mca-player2-bridge-neoforge-<version>.jar` | GitHub Actions artifact `mca-player2-bridge-neoforge-1.21.1` / `neoforge/build/libs` |
+| Cobblemon (optional, NeoForge) | 1.7.3 for Minecraft 1.21.1 | https://modrinth.com/mod/cobblemon/version/S1TrAn8c |
+
+Cobblemon is **optional**. Without it, villager conversations work as before and the Pokémon commands are simply not registered. With it, install the NeoForge 1.7.3 jar (and Kotlin for Forge, which Cobblemon requires). 1.8.x is not a target for this release.
 
 <details><summary>Fabric (secondary build)</summary>
 
@@ -49,6 +53,8 @@ This bridge connects the two in both directions.
 | Player2NPC (Fabric) | 1.21.1-1.4.0-Fabric | https://modrinth.com/mod/player2npc/version/QcQZkwnO |
 | MCA Reborn (Fabric) | 7.7.36+1.21.1 | https://modrinth.com/mod/minecraft-comes-alive-reborn/version/eUYBilCG |
 | MCA-Player2 Bridge | `mca-player2-bridge-fabric-<version>.jar` | artifact `mca-player2-bridge-fabric-1.21.1` |
+| Cobblemon (optional, Fabric) | 1.7.3 for Minecraft 1.21.1 | https://modrinth.com/mod/cobblemon/versions?g=1.21.1&l=fabric |
+
 
 </details>
 
@@ -132,7 +138,13 @@ How it works:
 /mcaplayer2 body <companion>                      # show the saved overrides
 /mcaplayer2 body <companion> <trait> <0.0-1.0>
 /mcaplayer2 body <companion> reset                # clear traits (gender is kept; use "gender ... auto" to clear it)
+
+# Only registered when Cobblemon is installed:
+/mcaplayer2 pokemon give <companion> <species> [level]   # gift a test Pokémon (default level 5)
+/mcaplayer2 pokemon party <companion>                    # print that companion's party
 ```
+
+When Cobblemon is installed, the companion's LLM also gets a `pokemon_party` command (no arguments) that lists its own team. Parties are saved per companion UUID in `<world>/data/mcaplayer2/companion_parties.nbt`.
 
 - `<companion>` is a loaded companion's name, which tab-completes, or its entity UUID. Put names with spaces in quotes.
 - Values are saved per companion UUID in `<world>/data/mcaplayer2/companion_bodies.json`.
@@ -205,6 +217,11 @@ common/src/main/java/dev/yucktheslime/mcaplayer2/
   goal/TalkToMcaVillagerGoal     PlayerEngine Task: path to villager, stay in range, face it, converse
   command/TalkToVillagerCommand  LLM command `talk_to_villager <name|uuid>`; runs the goal
   command/NearbyVillagersCommand LLM command `nearby_villagers`; lists villagers and their profiles
+  cobblemon/CobblemonHooks         Soft-load check; never references Cobblemon types directly
+  cobblemon/CompanionPartyStore    Per-companion PartyStore, keyed by entity UUID
+  cobblemon/CompanionPartyManager  World-save persistence (SERVER_STARTED / SERVER_STOPPING)
+  cobblemon/PokemonPartyCommand    LLM command `pokemon_party`
+  cobblemon/CobblemonDebugCommands `/mcaplayer2 pokemon give|party` (permission 2)
   util/McaVillagerUtil           Every MCA API call (find villagers, read profile, speak, look)
   util/VillagerProfile           MCA data snapshot plus its prompt description
   player2/CompanionAdapter       Every PlayerEngine conversation call (list companions, inject info/speech)
@@ -225,6 +242,7 @@ common/src/main/java/dev/yucktheslime/mcaplayer2/
 PlayerEngine and MCA Reborn don't publish API docs, so every class and method this mod calls was checked against the actual 1.21.1 jars from Modrinth, using `javap` and the CFR decompiler:
 
 - **PlayerEngine 1.21.1-1.4.0:** `tasks.base.Task`, `tasks.movement.GetToEntityTask(Entity, double)`, `util.helpers.LookHelper.lookAt(controller, Vec3)`, `commands.base.Command/Arg/ArgParser`, `PlayerEngineCommands.init(PlayerEngineController)`, `PlayerEngineController#runUserTask/getEntity/getOwner/getCommandExecutor`, `player2api.manager.ConversationManager.queueData/getOrCreateEventQueueData/onAICharacterMessage`, `AgentConversationData#onEvent/getEntity/getName/getUUID/getMod`, `Event.InfoMessage`, `Event.UserMessage`, `Event.CharacterMessage`.
+- **Cobblemon 1.7.3:** `PartyStore`, `Pokemon`, `PokemonProperties.parse/create`, `PokemonSpecies`, `Move`/`MoveSet` (currentPp/maxPp). Capture and battles are not in this release.
 - **MCA Reborn 7.7.36:** `net.conczin.mca.entity.VillagerEntityMCA`, `VillagerLike#getAgeState/getProfessionId/getTraits/isHostile`, `Messenger#sendChatToAllAround/isToYoungToSpeak/isSpeechImpaired`, `VillagerBrain#getPersonality/getMood/getMoodValue/getMemories`, `Memories#getHearts`, `Relationship#getGender`, `Traits.Trait#getId`.
 
 ## Building
