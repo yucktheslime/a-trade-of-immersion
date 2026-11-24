@@ -57,10 +57,14 @@ public final class ToiConfig {
     /**
      * Kagrenac server base URL: the kagrenac-server/ folder of this repo installed in DwemerDistro. Any http(s) URL
      * works, so a hosted Minecraft server (BisectHosting, Apex, ...) can reach Kagrenac on your PC through an https
-     * tunnel, e.g. "https://name.trycloudflare.com/custom-mods/TradeOfImmersionServer". A URL that is not on this
+     * tunnel, e.g. "https://name.trycloudflare.com/TradeOfImmersionServer". A URL that is not on this
      * machine or your local network needs a token.
+     * The default is where the DwemerDistro launcher installs the server. When the launcher also installed the mod
+     * jar, it writes mods/tradeofimmersion-kagrenac.json (URL and token); that file is used while this is left at
+     * the default (or empty) and kagrenacToken is empty. A manual install (deploy_toi.sh) lives at
+     * "http://127.0.0.1:19000/custom-mods/trade-of-immersion".
      */
-    public String kagrenacBaseUrl = "http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer";
+    public String kagrenacBaseUrl = DEFAULT_KAGRENAC_URL;
     /**
      * Kagrenac bearer token (the "token" in the server's config/config.php). Settable here for hosts that have no
      * environment variables; the environment variable TOI_KAGRENAC_TOKEN (or KAGRENAC_TOKEN) overrides it when set.
@@ -221,13 +225,35 @@ public final class ToiConfig {
         return aiApiKey == null ? "" : aiApiKey.trim();
     }
 
-    /** The Kagrenac token: the environment variable TOI_KAGRENAC_TOKEN (or KAGRENAC_TOKEN) when set, else kagrenacToken. */
+    /**
+     * The Kagrenac token: the environment variable TOI_KAGRENAC_TOKEN (or KAGRENAC_TOKEN) when set, else
+     * kagrenacToken, else the token in the launcher's pairing file (only while kagrenacBaseUrl is the default).
+     */
     public String effectiveKagrenacToken() {
         String env = System.getenv("TOI_KAGRENAC_TOKEN");
         if (env == null || env.isBlank()) env = System.getenv("KAGRENAC_TOKEN");
         if (env != null && !env.isBlank()) return env.trim();
-        return kagrenacToken == null ? "" : kagrenacToken.trim();
+        if (kagrenacToken != null && !kagrenacToken.isBlank()) return kagrenacToken.trim();
+        LauncherPairing p = urlIsDefault() ? LauncherPairing.get() : null;
+        return p != null ? p.token() : "";
     }
+
+    /** The Kagrenac base URL: kagrenacBaseUrl, or the launcher pairing file's URL while that is left at the default. */
+    public String effectiveKagrenacUrl() {
+        LauncherPairing p = urlIsDefault() && (kagrenacToken == null || kagrenacToken.isBlank()) ? LauncherPairing.get() : null;
+        if (p != null) return p.serverUrl();
+        return kagrenacBaseUrl == null || kagrenacBaseUrl.isBlank() ? DEFAULT_KAGRENAC_URL : kagrenacBaseUrl.trim();
+    }
+
+    private boolean urlIsDefault() {
+        String u = kagrenacBaseUrl == null ? "" : kagrenacBaseUrl.trim().replaceAll("/+$", "");
+        return u.isEmpty() || u.equals(DEFAULT_KAGRENAC_URL) || u.equals(OLD_DEFAULT_KAGRENAC_URL);
+    }
+
+    /** Where the DwemerDistro launcher (release install, server_folder TradeOfImmersionServer) serves the server. */
+    public static final String DEFAULT_KAGRENAC_URL = "http://127.0.0.1:19000/TradeOfImmersionServer";
+    /** The 0.3.0/0.3.1 default; treated like the default so a launcher pairing can take over. */
+    static final String OLD_DEFAULT_KAGRENAC_URL = "http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer";
 
     private static transient boolean warnedLegacyEnv;
 
@@ -251,6 +277,12 @@ public final class ToiConfig {
             }
         }
         instance = loaded != null ? loaded : new ToiConfig();
+        LauncherPairing.reload();
+        if (loaded == null && LauncherPairing.get() != null) {
+            // First start after the DwemerDistro launcher installed and paired the mod: use Kagrenac right away.
+            instance.aiBackend = "kagrenac";
+            TradeOfImmersion.LOGGER.info("Found the DwemerDistro launcher pairing ({}); using aiBackend kagrenac", LauncherPairing.FILE);
+        }
         try {
             Files.createDirectories(path.getParent());
             try (Writer w = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {

@@ -145,7 +145,7 @@ final class KagrenacOutbox {
                     lastProblem = root instanceof ConnectException ? "connection refused"
                             : root instanceof HttpTimeoutException ? "timed out" : msg.length() > 80 ? msg.substring(0, 80) : msg;
                     QuietLog.warn(WARN_KEY, "Kagrenac unreachable at {} ({}); {} event(s) queued, retrying in {}s",
-                            KagrenacBackend.safeUrl(ToiConfig.get().kagrenacBaseUrl), lastProblem, queue.size(), wait / 1000);
+                            KagrenacBackend.safeUrl(ToiConfig.get().effectiveKagrenacUrl()), lastProblem, queue.size(), wait / 1000);
                     retry = false;
                 }
             }

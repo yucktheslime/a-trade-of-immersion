@@ -222,9 +222,9 @@ public final class NpcCommand {
         c.getSource().sendSuccess(() -> Component.literal(CompanionBrain.status()), false);
         if (CompanionBrain.backend() instanceof KagrenacBackend k) {
             var srv = c.getSource().getServer();
-            String token = ToiConfig.get().effectiveKagrenacToken().isBlank() ? "NOT SET (kagrenacToken or env TOI_KAGRENAC_TOKEN)" : "set";
+            String token = ToiConfig.get().effectiveKagrenacToken().isBlank() ? "NOT SET (kagrenacToken or env TOI_KAGRENAC_TOKEN)" : (ToiConfig.get().kagrenacToken.isBlank() && System.getenv("TOI_KAGRENAC_TOKEN") == null && System.getenv("KAGRENAC_TOKEN") == null && dev.yucktheslime.tradeofimmersion.config.LauncherPairing.get() != null ? "set (launcher pairing)" : "set");
             k.refreshHealth().whenComplete((info, err) -> srv.execute(() -> c.getSource().sendSuccess(() ->
-                    Component.literal("Kagrenac " + KagrenacBackend.safeUrl(ToiConfig.get().kagrenacBaseUrl) + (KagrenacBackend.remote() ? " (remote)" : "") + ": " + info + "; token " + token
+                    Component.literal("Kagrenac " + KagrenacBackend.safeUrl(ToiConfig.get().effectiveKagrenacUrl()) + (KagrenacBackend.remote() ? " (remote)" : "") + ": " + info + "; token " + token
                             + "; session " + KagrenacBackend.session() + "; voice " + (ToiConfig.get().voiceEnabled ? "on (" + dev.yucktheslime.tradeofimmersion.voice.VoiceSync.status() + ")" : "off")), false)));
         }
         return 1;

@@ -85,12 +85,12 @@ public final class KagrenacBackend implements AiBackend {
 
     /** Remote mode: a URL outside this machine and the local network. */
     public static boolean remote() {
-        return !isLocalUrl(ToiConfig.get().kagrenacBaseUrl);
+        return !isLocalUrl(ToiConfig.get().effectiveKagrenacUrl());
     }
 
     /** Logged once per (re)load. Never prints the token. */
     private static void securityCheck() {
-        String url = ToiConfig.get().kagrenacBaseUrl == null ? "" : ToiConfig.get().kagrenacBaseUrl.trim();
+        String url = ToiConfig.get().effectiveKagrenacUrl();
         if (!remote()) return;
         if (ToiConfig.get().effectiveKagrenacToken().isBlank()) {
             TradeOfImmersion.LOGGER.warn("Kagrenac URL {} is not local: a token is required (kagrenacToken or env TOI_KAGRENAC_TOKEN). Only the health check (no game data) is sent until one is set.", safeUrl(url));
@@ -123,7 +123,7 @@ public final class KagrenacBackend implements AiBackend {
 
     @Override
     public String name() {
-        return "kagrenac(" + safeUrl(ToiConfig.get().kagrenacBaseUrl) + (remote() ? ", remote" : "") + ")";
+        return "kagrenac(" + safeUrl(ToiConfig.get().effectiveKagrenacUrl()) + (remote() ? ", remote" : "") + ")";
     }
 
     // ------------------------------------------------------------------ helpers
@@ -583,7 +583,7 @@ public final class KagrenacBackend implements AiBackend {
     }
 
     private static String url(String endpoint) {
-        return ToiConfig.get().kagrenacBaseUrl.trim().replaceAll("/+$", "") + "/" + endpoint;
+        return ToiConfig.get().effectiveKagrenacUrl().replaceAll("/+$", "") + "/" + endpoint;
     }
 
     private HttpRequest.Builder request(String endpoint, int timeoutSeconds) {
