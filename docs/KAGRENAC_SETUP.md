@@ -12,7 +12,9 @@ With Kagrenac, the AI runs in a small local server instead of inside Minecraft. 
   equip, use or eat items, give items, pick up, inspect items, and talk to villagers;
 - deaths, attacks, damage, gifts, villager conversations and MCA family changes are sent to the
   server, so NPCs know what happened;
-- with several companions around, the server picks which one answers.
+- with several companions around, the server picks which one answers;
+- optional **Minime** and **TXT2VEC** (the same DwemerDistro helpers CHIM uses) can classify a line
+  and recall the most relevant memories, not only the newest ones.
 
 You need about 30 minutes, plus download time.
 
@@ -321,9 +323,30 @@ How the voice works:
 
 Speech input (talking to NPCs with a microphone) is not in this version. It is on the [roadmap](ROADMAP.md).
 
-## 9. Optional: connect a hosted server (Bisect etc.)
+## 9. Optional: Minime and TXT2VEC (off by default)
 
-Kagrenac keeps running **on your PC**, exactly as in steps 1 to 8. This step is only needed when the Minecraft
+These are DwemerDistro's local text helpers. CHIM uses them too. They are not required: with them
+off, NPCs still talk, keep a summary and diary, and use the newest memories.
+
+1. In the DwemerDistro launcher, start **Minime and TXT2VEC** (port 8082). You can check them with
+   the launcher's test panel: **Classify text** tests Minime only (`GET /extract`), not TXT2VEC.
+2. After you install or **Update** this server, open the dashboard at
+   `http://127.0.0.1:19000/TradeOfImmersionServer/` (or your manual install URL).
+3. Go to **Configuration → Minime & TXT2VEC**.
+   - Tick **Enabled** under Minime, keep the URL `http://127.0.0.1:8082`, save, then click
+     **Test Minime**. You should see a classification that includes `is_memory_recall`.
+   - Tick **Enabled** under TXT2VEC, keep the same URL, save, then click **Test TXT2VEC**.
+     You should see that a vector was returned. Press **Reindex** so existing diary notes and
+     game events get vectors.
+4. In game, ask about something from earlier in the conversation (not only the last few lines).
+
+If a service is stopped, Kagrenac falls back to the previous behaviour (newest diary entries,
+keyword fact search, and the language model deciding actions). Nothing else needs changing in
+the Minecraft config.
+
+## 10. Optional: connect a hosted server (Bisect etc.)
+
+Kagrenac keeps running **on your PC**, exactly as in steps 1 to 9. This step is only needed when the Minecraft
 server runs somewhere else, such as Bisect Hosting or another server host, and should use the Kagrenac on your PC.
 Single player and a server on your own PC do not need it.
 

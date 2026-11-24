@@ -123,7 +123,7 @@ A plain upstream Kagrenac template server also works, but only with its 3 action
 through an https tunnel (Cloudflare quick tunnel or Tailscale Funnel). Set `kagrenacBaseUrl` to the tunnel URL plus
 `/TradeOfImmersionServer` and `kagrenacToken` in the host's config file. Events are queued while your PC is
 off, and players' chat stays clean. See
-[step 9 of the guide](docs/KAGRENAC_SETUP.md#9-optional-connect-a-hosted-server-bisect-etc).
+[step 10 of the guide](docs/KAGRENAC_SETUP.md#10-optional-connect-a-hosted-server-bisect-etc).
 
 ### Offline mock
 

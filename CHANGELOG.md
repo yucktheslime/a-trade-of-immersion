@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4
+- **Minime and TXT2VEC** (optional, off by default): Kagrenac can use DwemerDistro's local text helpers on port 8082, the same way CHIM does.
+  - Minime (`GET /extract?text=...`, optional `GET /command`) decides whether a line needs a memory lookup and can hint an action. The language model is the fallback if Minime is off or misses.
+  - TXT2VEC (`POST /embed` with `{"text":"..."}`) embeds diary notes and game events so a turn can recall the most relevant ones, not only the newest. It is also a fact-embeddings provider.
+  - Vectors are stored in Postgres (a pgvector column when the extension is available, otherwise a JSON float array with cosine similarity in PHP). Migration `009_memory_vectors` is safe to run more than once.
+  - Dashboard: **Configuration > Minime & TXT2VEC** has toggles, a status probe and test buttons. Start the service in the launcher, then turn each one on and press Reindex.
+- Server 0.3.3-toi. No mod code changes; the version moves with the server release.
+
 ## 0.3.3
 - **Voice works with the DwemerDistro launcher's PocketTTS (port 8024).** The server used to send speech to
   `http://127.0.0.1:8086/v1/audio/speech` (the audio.cpp build), which the launcher's PocketTTS does not have
@@ -14,6 +22,7 @@
 - Dashboard **Voice** page: provider choice, a **Speaker** list from PocketTTS, language, what each voice hint
   picks from, and a voice hint in the **Speak** test.
 - Server 0.3.2-toi. No mod code changes; the version moves with the server release.
+
 
 ## 0.3.2
 - **DwemerDistro launcher listing:** the server is now its own repository,
@@ -40,7 +49,7 @@
   `kagrenacToken` can be set in the config (the `TOI_KAGRENAC_TOKEN` env var overrides it).
   - A remote URL requires a token (only the health check is sent without one). Plain http over the internet is
     warned about, and the token is never logged. The dashboard refuses requests that come through a tunnel.
-  - Guide: [Optional: connect a hosted server](docs/KAGRENAC_SETUP.md#9-optional-connect-a-hosted-server-bisect-etc).
+  - Guide: [Optional: connect a hosted server](docs/KAGRENAC_SETUP.md#10-optional-connect-a-hosted-server-bisect-etc).
 - **Event forwarding:** player, companion and MCA villager deaths (with the death message and place), boss kills,
   kills by companions and fights are sent to Kagrenac. Optionally ordinary mob kills too (`kagrenacLogMobKills`).
   - Sent in the background through a bounded queue (`kagrenacEventQueueSize`). They are retried with backoff
