@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.yucktheslime.tradeofimmersion.TradeOfImmersion;
+import dev.yucktheslime.tradeofimmersion.action.ActionExecutor;
 import dev.yucktheslime.tradeofimmersion.config.ToiConfig;
 
 import java.net.URI;
@@ -51,6 +52,8 @@ public final class KagrenacBackend implements AiBackend {
 
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private volatile Set<String> capabilities = Set.of();
+    private volatile List<String> pluginActions = List.of();
+    public static final int MAX_OFFERED_ACTIONS = 24;
     private volatile String serverInfo = "not checked yet";
     /** The last health.php answered with ok true. */
     private volatile boolean healthy;
@@ -175,9 +178,16 @@ public final class KagrenacBackend implements AiBackend {
         Set<String> allowed = new HashSet<>(ToiConfig.get().kagrenacAllowedActions == null ? List.of() : ToiConfig.get().kagrenacAllowedActions);
         List<String> out = new ArrayList<>();
         for (String a : ALL_ACTIONS) {
+            if (out.size() >= MAX_OFFERED_ACTIONS) break;
             if (!allowed.contains(a)) continue;
             if (!minecraftServer() && !TEMPLATE_ACTIONS.contains(a)) continue;
             out.add(a);
+        }
+        // Enabled server plugins (health.php plugin_actions). The server allowlists them;
+        // the executor runs a simple gesture for names it does not otherwise handle.
+        for (String a : pluginActions) {
+            if (out.size() >= MAX_OFFERED_ACTIONS) break;
+            if (!out.contains(a)) out.add(a);
         }
         return out;
     }
@@ -568,6 +578,16 @@ public final class KagrenacBackend implements AiBackend {
                 Set<String> caps = new HashSet<>();
                 if (o.get("capabilities") instanceof JsonArray arr) arr.forEach(e -> caps.add(e.getAsString()));
                 capabilities = Set.copyOf(caps);
+                List<String> extras = new ArrayList<>();
+                if (o.get("plugin_actions") instanceof JsonArray arr) {
+                    arr.forEach(e -> {
+                        if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isString()) return;
+                        String n = e.getAsString();
+                        if (n.matches("[A-Za-z0-9_]{1,40}")) extras.add(n);
+                    });
+                }
+                pluginActions = List.copyOf(extras);
+                ActionExecutor.setExtraAllowed(extras);
                 boolean ok = o.has("ok") && o.get("ok").getAsBoolean();
                 healthy = ok;
                 serverInfo = (ok ? "ready" : "not ready (" + (o.has("error") ? o.getAsJsonObject("error").get("code").getAsString() : "HTTP " + resp.statusCode()) + ")")

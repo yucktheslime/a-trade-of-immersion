@@ -18,6 +18,9 @@ jobs:
       - name: Server Minime and TXT2VEC tests (local stub)
         run: php kagrenac-server/scripts/test_minime_txt2vec.php
 
+      - name: Server plugin tests
+        run: php kagrenac-server/tests/plugins_test.php
+
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:

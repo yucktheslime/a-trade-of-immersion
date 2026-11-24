@@ -9,6 +9,7 @@ import dev.yucktheslime.tradeofimmersion.memory.ItemKnowledgeStore;
 import dev.yucktheslime.tradeofimmersion.memory.NpcMemoryStore;
 import dev.yucktheslime.tradeofimmersion.util.McaVillagerUtil;
 import net.conczin.mca.entity.VillagerEntityMCA;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -18,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -32,8 +34,20 @@ public final class ActionExecutor {
     public static final Set<String> ALLOWED = Set.of("follow", "stay", "goto", "mount", "dismount", "attack", "equip", "use_item",
             "give_item", "pick_up", "inspect_item", "talk_to_villager");
     public static final int MAX_ACTIONS = 4;
+    private static volatile Set<String> extraAllowed = Set.of();
 
     private ActionExecutor() {
+    }
+
+    /** Extra action names advertised by enabled Kagrenac server plugins. */
+    public static void setExtraAllowed(Collection<String> names) {
+        Set<String> clean = new LinkedHashSet<>();
+        if (names != null) {
+            for (String n : names) {
+                if (n != null && n.matches("[A-Za-z0-9_]{1,40}")) clean.add(n.toLowerCase(Locale.ROOT));
+            }
+        }
+        extraAllowed = Set.copyOf(clean);
     }
 
     public record Result(String action, boolean ok, String text) {
@@ -55,7 +69,7 @@ public final class ActionExecutor {
             if (name.equals("hold_position") || name.equals("wait")) name = "stay";
             if (name.equals("follow_player")) name = "follow";
             JsonObject args = a.has("args") && a.get("args").isJsonObject() ? a.getAsJsonObject("args") : a;
-            if (!ALLOWED.contains(name)) {
+            if (!ALLOWED.contains(name) && !extraAllowed.contains(name)) {
                 out.add(new Result(name, false, "not an allowed action"));
                 continue;
             }
@@ -211,6 +225,11 @@ public final class ActionExecutor {
                 return ok(name, "going to talk to " + v.get().getName().getString());
             }
             default -> {
+                if (extraAllowed.contains(name)) {
+                    c.swing(InteractionHand.MAIN_HAND);
+                    String val = first(a, "value", "name");
+                    return ok(name, val.isBlank() ? ("did " + name) : (name + ": " + val));
+                }
                 return fail(name, "unknown");
             }
         }

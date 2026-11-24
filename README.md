@@ -116,6 +116,9 @@ What you get with the bundled server ([kagrenac-server/](kagrenac-server/MINECRA
 - **NPC selection:** when several of your companions are near and you name none, `decision.php` picks who answers.
 - **Interruptions:** a new line while a reply is still coming cancels it (`cancel.php`).
 - **Voice (off by default):** PocketTTS replies played from the NPC's position. Set `voiceEnabled`.
+- **Plugins:** the dashboard **Plugins** page can enable bundled examples (mod item knowledge, a sample wave
+  action) or install a zip / GitHub plugin. Plugins run code on the server; install only ones you trust, and
+  expect to enter the server token. See [kagrenac-server/docs/PLUGINS.md](kagrenac-server/docs/PLUGINS.md).
 
 A plain upstream Kagrenac template server also works, but only with its 3 actions and 4 event types.
 

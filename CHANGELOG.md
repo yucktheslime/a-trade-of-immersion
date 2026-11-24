@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+- **Server plugins:** a Plugins page on the dashboard (Configuration) where you can enable, disable,
+  configure, install (zip or GitHub URL) and remove server plugins.
+  - Each plugin is a folder with `plugin.json` and `plugin.php`. Hooks: prompt or context injectors,
+    extra allowlisted NPC actions, and `game_event` handlers.
+  - Enable state and settings are stored in the database (migration `010_plugins`).
+  - User-installed plugins live in `config/plugins/`, next to the private config, so a DwemerDistro
+    launcher update keeps them and Core's web protection (which already denies `config/` and `lib/`)
+    does not serve the PHP. Bundled examples live in `lib/plugins/bundled/`.
+  - Install and other changes need the server token. The page warns that plugins run code on the
+    server. Zips are checked for a valid manifest, path traversal, symlinks and unexpected files.
+  - Shipped examples: **Mod item knowledge** (configurable facts in the prompt) and **Sample wave
+    action** (`[ACTION:wave]`). The Minecraft client offers `plugin_actions` from `health.php` and
+    treats unknown plugin actions as a simple gesture.
+  - Authoring guide: [kagrenac-server/docs/PLUGINS.md](kagrenac-server/docs/PLUGINS.md).
+
 ## 0.3.4
 - **Minime and TXT2VEC** (optional, off by default): Kagrenac can use DwemerDistro's local text helpers on port 8082, the same way CHIM does.
   - Minime (`GET /extract?text=...`, optional `GET /command`) decides whether a line needs a memory lookup and can hint an action. The language model is the fallback if Minime is off or misses.
