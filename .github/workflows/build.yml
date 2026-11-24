@@ -24,6 +24,9 @@ jobs:
       - name: Server NPC voice tests (PocketTTS stub)
         run: php kagrenac-server/tests/npc_voices_test.php
 
+      - name: Server speech-to-text tests (Parakeet / faster-whisper / whisper.cpp stubs)
+        run: php kagrenac-server/tests/stt_test.php
+
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:

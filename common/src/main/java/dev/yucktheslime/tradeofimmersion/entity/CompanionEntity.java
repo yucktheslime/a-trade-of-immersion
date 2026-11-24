@@ -208,7 +208,8 @@ public class CompanionEntity extends PathfinderMob {
         double r = Math.max(1, cfg.npcChatRadius), ro = Math.max(r, cfg.npcChatOwnerRadius);
         for (ServerPlayer p : sl.players()) {
             double d = p.distanceToSqr(this);
-            if (d < r * r || isOwner(p) && d < ro * ro) p.sendSystemMessage(msg);
+            if (d < r * r || isOwner(p) && d < ro * ro) dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.deliver(p, this, name(), line,
+                    dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.KIND_COMPANION, "", msg);
         }
         NpcMemoryStore.get().chat(getUUID(), name(), line);
     }

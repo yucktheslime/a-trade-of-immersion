@@ -112,11 +112,7 @@ public final class CompanionMenu {
         String who = p.getGameProfile().getName();
         switch (a.action()) {
             case "talk" -> {
-                String text = a.arg().replaceAll("\\s+", " ").trim();
-                if (!text.isEmpty()) {
-                    p.sendSystemMessage(Component.literal("<" + who + " to " + c.name() + "> " + text).withStyle(s -> s.withColor(0xAAAAAA)));
-                    CompanionBrain.onChat(c, who, text);
-                }
+                dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.talk(p, c.getId(), a.arg(), false);
             }
             case "follow", "stay", "wander" -> {
                 if (!owner) return;

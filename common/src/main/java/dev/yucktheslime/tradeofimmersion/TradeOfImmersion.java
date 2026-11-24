@@ -41,6 +41,7 @@ public final class TradeOfImmersion {
         CompanionBodySync.init();
         dev.yucktheslime.tradeofimmersion.voice.VoiceSync.init();
         dev.yucktheslime.tradeofimmersion.menu.CompanionMenu.init();
+        dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.init();
         WorldEvents.init();
         CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
             CompanionBodyCommand.register(dispatcher);

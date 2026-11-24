@@ -85,6 +85,60 @@ public final class VillagerTalk {
                 }));
     }
 
+    /**
+     * A player talks to an MCA villager from the dialogue box (typed or push-to-talk): the villager answers through
+     * the same AI backend with its MCA profile and the saved conversation, out loud (MCA's villager message, so it
+     * also shows in the box) and with its voice when voice is on.
+     */
+    public static void playerSpeaks(net.minecraft.server.level.ServerPlayer p, VillagerEntityMCA v, String message) {
+        if (message == null || message.isBlank()) return;
+        String vName = McaVillagerUtil.name(v);
+        String who = p.getGameProfile().getName();
+        McaVillagerUtil.lookAt(v, p);
+        ConversationMemoryStore.get().append(v.getUUID(), vName, who, ConversationMemoryStore.Speaker.COMPANION, message, v.level().getGameTime());
+        if (!McaVillagerUtil.canTalk(v)) {
+            dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.info(p, vName + " can't talk right now.");
+            return;
+        }
+        if (!CompanionBrain.trySlot()) {
+            dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.info(p, vName + " didn't answer (AI rate limit, try again in a moment).");
+            return;
+        }
+        ToiConfig cfg = ToiConfig.get();
+        VillagerProfile prof = McaVillagerUtil.profile(v, p);
+        String system = "You are " + vName + ", a villager in a Minecraft village (MCA). " + prof.describe()
+                + "\nA player named " + who + " is talking to you. "
+                + "Answer in character, in at most " + cfg.villagerReplyMaxWords + " words, as plain spoken text on one line. "
+                + "Let your personality, mood and how much you like " + who + " show. Never mention being an AI.";
+        List<String> history = ConversationMemoryStore.get().recentLines(v.getUUID(), who, cfg.historyLinesInPrompt);
+        String user = "Earlier conversation:\n" + String.join("\n", history) + "\n\n" + who + " says: " + message + "\nYour reply:";
+        Map<String, String> ctx = new LinkedHashMap<>();
+        ctx.put("profession", prof.profession());
+        ctx.put("personality", prof.personality());
+        ctx.put("mood", prof.mood());
+        ctx.put("speaker_owner", who);
+        ctx.put("speaker_kind", "player");
+        MinecraftServer srv = p.getServer();
+        UUID vid = v.getUUID(), pid = p.getUUID();
+        CompanionBrain.active().villagerLine(new VillagerRequest(vid.toString(), vName, who, system, user, message, ctx))
+                .whenComplete((line, err) -> srv.execute(() -> {
+                    VillagerEntityMCA vill = findVillager(srv, vid);
+                    if (vill == null) return;
+                    if (err != null || line == null || line.isBlank()) {
+                        if (err != null) dev.yucktheslime.tradeofimmersion.util.QuietLog.warn("villager-line", "Villager line failed: {}", err.toString());
+                        var pl = srv.getPlayerList().getPlayer(pid);
+                        if (pl != null) dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.info(pl, vName + " didn't answer (AI unavailable).");
+                        return;
+                    }
+                    String clean = line.replaceAll("^\"|\"$", "").trim();
+                    McaVillagerUtil.say(vill, clean);
+                    dev.yucktheslime.tradeofimmersion.voice.VoiceSync.spoke(vill, dev.yucktheslime.tradeofimmersion.ai.KagrenacBackend.villagerId(vid.toString()),
+                            clean, "", prof.gender().isEmpty() ? "neutral" : prof.gender());
+                    dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.event("villager_spoke", null, vName + " (villager) told " + who + ": " + clean);
+                    ConversationMemoryStore.get().append(vid, vName, who, ConversationMemoryStore.Speaker.VILLAGER, clean, vill.level().getGameTime());
+                }));
+    }
+
     /** The companion answered a villager line out loud: pass it on unless it is continuing with an explicit talk action. */
     public static void companionReplied(CompanionEntity c, String said, boolean continuingWithAction) {
         if (c.talkingVillager == null || continuingWithAction || c.getServer() == null) return;

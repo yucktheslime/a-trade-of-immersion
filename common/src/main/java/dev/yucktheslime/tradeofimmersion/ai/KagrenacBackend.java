@@ -566,6 +566,39 @@ public final class KagrenacBackend implements AiBackend {
     }
 
     /**
+     * listen.php: speech to text through the Kagrenac server (its stt settings: Parakeet, faster-whisper, whisper.cpp
+     * or any OpenAI-compatible service). Completes with the transcript, or fails with the server's error code.
+     */
+    public CompletableFuture<String> listen(byte[] wav) {
+        HttpRequest.Builder rb;
+        try {
+            rb = request("listen.php", 60).setHeader("Content-Type", "audio/wav")
+                    .header("X-Request-Id", newRequestId("stt")).POST(HttpRequest.BodyPublishers.ofByteArray(wav));
+        } catch (RuntimeException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+        return http.sendAsync(rb.build(), HttpResponse.BodyHandlers.ofString()).thenApply(resp -> {
+            String code = "", message = "";
+            try {
+                JsonObject o = JsonParser.parseString(resp.body()).getAsJsonObject();
+                if (resp.statusCode() == 200 && o.has("text") && o.get("text").isJsonPrimitive()) {
+                    String text = dev.yucktheslime.tradeofimmersion.stt.SttHttp.clean(o.get("text").getAsString());
+                    if (text != null) return text;
+                }
+                if (o.has("error") && o.get("error").isJsonObject()) {
+                    JsonObject e = o.getAsJsonObject("error");
+                    code = e.has("code") ? e.get("code").getAsString() : "";
+                    message = e.has("message") ? e.get("message").getAsString() : "";
+                }
+            } catch (RuntimeException ignored) {
+            }
+            if ("stt_disabled".equals(code)) throw new IllegalStateException("speech to text is off on the Kagrenac server (dashboard: Voice)");
+            if (resp.statusCode() == 404) throw new IllegalStateException("listen.php not found (update the Kagrenac server)");
+            throw new IllegalStateException(!message.isBlank() ? message : "listen.php HTTP " + resp.statusCode() + (code.isBlank() ? "" : " " + code));
+        });
+    }
+
+    /**
      * npc_voice.php (per-NPC voice profiles, server 0.3.5-toi+). The answer JSON is returned for errors too (with
      * {@code ok:false} and {@code error.message}), so commands and the menu can show the server's reason.
      */

@@ -61,6 +61,10 @@ public final class NpcCommand {
                                         .executes(c -> spawn(c, StringArgumentType.getString(c, "name"), StringArgumentType.getString(c, "gender"),
                                                 StringArgumentType.getString(c, "skin")))))));
         root.then(Commands.literal("list").executes(NpcCommand::list));
+        root.then(Commands.literal("stt").executes(c -> {
+            c.getSource().sendSuccess(() -> Component.literal("Speech to text: " + dev.yucktheslime.tradeofimmersion.stt.SttRelay.status()), false);
+            return 1;
+        }));
         root.then(VoiceCommand.build());
         root.then(Commands.literal("ai").then(Commands.literal("status")
                         .requires(s -> s.hasPermission(2) || ToiConfig.get().statusForEveryone).executes(NpcCommand::aiStatus))
@@ -253,7 +257,8 @@ public final class NpcCommand {
             String token = ToiConfig.get().effectiveKagrenacToken().isBlank() ? "NOT SET (kagrenacToken or env TOI_KAGRENAC_TOKEN)" : (ToiConfig.get().kagrenacToken.isBlank() && System.getenv("TOI_KAGRENAC_TOKEN") == null && System.getenv("KAGRENAC_TOKEN") == null && dev.yucktheslime.tradeofimmersion.config.LauncherPairing.get() != null ? "set (launcher pairing)" : "set");
             k.refreshHealth().whenComplete((info, err) -> srv.execute(() -> c.getSource().sendSuccess(() ->
                     Component.literal("Kagrenac " + KagrenacBackend.safeUrl(ToiConfig.get().effectiveKagrenacUrl()) + (KagrenacBackend.remote() ? " (remote)" : "") + ": " + info + "; token " + token
-                            + "; session " + KagrenacBackend.session() + "; voice " + (ToiConfig.get().voiceEnabled ? "on (" + dev.yucktheslime.tradeofimmersion.voice.VoiceSync.status() + ")" : "off")), false)));
+                            + "; session " + KagrenacBackend.session() + "; voice " + (ToiConfig.get().voiceEnabled ? "on (" + dev.yucktheslime.tradeofimmersion.voice.VoiceSync.status() + ")" : "off")
+                            + "; speech input " + dev.yucktheslime.tradeofimmersion.stt.SttRelay.describeService()), false)));
         }
         return 1;
     }

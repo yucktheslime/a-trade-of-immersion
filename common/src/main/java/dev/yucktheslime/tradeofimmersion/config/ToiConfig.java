@@ -133,6 +133,58 @@ public final class ToiConfig {
     /** Let non-op players run /npc ai status (backend, errors, queue). Off: ops only. */
     public boolean statusForEveryone = false;
 
+    // ---- NPC dialogue box (client side, 0.3.8) ----
+    /**
+     * Client: show AI NPC lines (companions, and MCA villagers' lines including MCA's own) in a dialogue box on the
+     * screen instead of the main chat. The server only stops sending companion lines to chat for players whose
+     * client has this on; players without the mod (or with this off) keep getting them in chat.
+     */
+    public boolean dialogueBox = true;
+    /** Client: also copy NPC lines into the main chat while the dialogue box is on. */
+    public boolean mirrorToChat = false;
+    /** Client: where the box sits: top_left, top_right, bottom_left, bottom_right, top_center or bottom_center. */
+    public String dialogueBoxAnchor = "bottom_right";
+    /** Client: offset in GUI pixels from that corner (positive = towards the middle of the screen). */
+    public int dialogueBoxOffsetX = 4;
+    public int dialogueBoxOffsetY = 56;
+    /** Client: box width in GUI pixels and how many text lines it shows at most. */
+    public int dialogueBoxWidth = 260;
+    public int dialogueBoxMaxLines = 8;
+    /** Client: background opacity 0..1 and text scale (0.5..2). */
+    public float dialogueBoxOpacity = 0.6f;
+    public float dialogueBoxScale = 1.0f;
+    /** Client: a line stays this many seconds, then fades out over dialogueBoxFadeSeconds. */
+    public int dialogueBoxLineSeconds = 12;
+    public int dialogueBoxFadeSeconds = 2;
+    /** Client: lines kept for the scroll-back screen. */
+    public int dialogueHistorySize = 200;
+
+    // ---- speech to text (push-to-talk, 0.3.8) ----
+    /**
+     * Client: push-to-talk ({@code B} by default, rebind it in Controls) records the microphone and turns it into
+     * a line to the NPC you look at. {@code "server"}: the recording goes to the Minecraft server, which asks
+     * Kagrenac's listen.php (or sttUrl below); {@code "direct"}: this computer calls sttDirectUrl itself (single
+     * player / your own PC); {@code "off"}: no speech input.
+     */
+    public String sttMode = "server";
+    /** Client, for sttMode "direct": an OpenAI-compatible transcription URL (Parakeet, faster-whisper-server, whisper.cpp /inference). */
+    public String sttDirectUrl = "http://127.0.0.1:8022/v1/audio/transcriptions";
+    /** Model name sent with OpenAI-compatible requests (Parakeet ignores it; OpenAI needs whisper-1). */
+    public String sttModel = "whisper-1";
+    /** Client: microphone to use: empty = the system default, otherwise part of the device name (see /npc stt mics in the log). */
+    public String sttMicDevice = "";
+    /** Client: longest recording in seconds (1..30). */
+    public int sttMaxSeconds = 15;
+    /** Client: send the transcript to the NPC right away. Off: it is put in the talk box so you can fix it and press Enter. */
+    public boolean sttAutoSend = true;
+    /**
+     * Server: speech from players goes to Kagrenac's listen.php when aiBackend is kagrenac. Set this to an
+     * OpenAI-compatible transcription URL to use that instead (or when you do not use Kagrenac at all).
+     */
+    public String sttUrl = "";
+    /** Server: let players send speech recordings at all. */
+    public boolean sttEnabled = true;
+
     // ---- companion menu, MCA editor and NPC voice profiles ----
     /** Right-clicking a companion opens its menu (talk, follow/stay, inventory, gift, MCA editor, voice). Off: the old clicks (owner click toggles follow/stay, gives the held item). */
     public boolean companionMenuOnRightClick = true;

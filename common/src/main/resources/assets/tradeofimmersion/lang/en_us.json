@@ -1,5 +1,9 @@
 {
   "entity.tradeofimmersion.companion": "Companion",
   "item.tradeofimmersion.companion_spawn_egg": "Companion Spawn Egg",
-  "item.tradeofimmersion.companion_spawn_egg.desc": "Spawns an AI companion that follows you. Rename it in an anvil to pick a name."
+  "item.tradeofimmersion.companion_spawn_egg.desc": "Spawns an AI companion that follows you. Rename it in an anvil to pick a name.",
+  "key.categories.tradeofimmersion": "A Trade of Immersion",
+  "key.tradeofimmersion.talk": "Talk to NPC (type)",
+  "key.tradeofimmersion.push_to_talk": "Push to talk to NPC (hold)",
+  "key.tradeofimmersion.dialogue_history": "NPC dialogue history"
 }

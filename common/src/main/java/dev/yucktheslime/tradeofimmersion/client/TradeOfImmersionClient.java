@@ -12,5 +12,6 @@ public final class TradeOfImmersionClient {
         EntityRendererRegistry.register(ModRegistry.COMPANION, CompanionRenderer::new);
         dev.architectury.registry.client.rendering.ColorHandlerRegistry.registerItemColors(
                 (stack, tint) -> tint == 0 ? 0xFF3A6EA5 : 0xFFE8C07D, ModRegistry.COMPANION_SPAWN_EGG);
+        dev.yucktheslime.tradeofimmersion.client.dialogue.DialogueClient.init();
     }
 }
