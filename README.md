@@ -140,7 +140,17 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
   - `/npc spawn [name] [male|female|neutral] [skin]` (op);
   - or the **Companion Spawn Egg** from the Spawn Eggs tab (rename the egg in an anvil to name the companion);
   - or right-click an unowned companion to claim it.
-- **Talk:** type in normal chat.
+- **Talk with the dialogue box** (0.3.8): NPC lines (companions and MCA villagers, MCA's own lines too) show in a
+  box at the bottom right instead of the main chat, with the speaker's name and a fade-out.
+  - **V** (or **Enter** while looking at an NPC) opens a talk field for the NPC you look at (or the last one that
+    spoke). **Tab** picks the next NPC nearby, **Enter** sends, the mouse wheel scrolls back. **H** opens the
+    scroll-back. In MCA's interaction screen a **Talk (AI)** button (or V) opens it for that villager.
+  - **Hold B** to speak: the mod records your microphone, turns it into text with your speech-to-text service
+    (Parakeet in DwemerDistro, through Kagrenac) and says it to the NPC you look at. "Listening..." and
+    "Transcribing..." show in the box. All keys can be changed in **Options → Controls → A Trade of Immersion**.
+  - MCA villagers answer you through this mod's AI (with their MCA personality, mood and hearts).
+  - Players without the mod, or with `dialogueBox` off, keep getting NPC lines in chat.
+- **Talk in chat:** normal chat still works.
   - A companion answers when you use its name ("Elara, follow me"), or when you are its owner and within 10 blocks.
   - `/npc say <npc> <text>` works from anywhere.
   - Only real dialogue reaches companions. Command feedback, advancements, death messages, typed commands and error codes are ignored.
@@ -232,6 +242,23 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `voicePlay` | true | per player: `false` mutes NPC voices |
 | `voiceVillagers` | true | voice MCA villagers' lines too |
 | `voiceVolume`, `voiceRange` | 1.0, 24 | volume and hearing distance in blocks (Voice/Speech slider applies) |
+
+**Dialogue box and speech input (0.3.8)**
+
+| Key | Default | Meaning |
+|---|---|---|
+| `dialogueBox` | true | per player: NPC lines in the dialogue box instead of chat (the server keeps using chat for players without it) |
+| `mirrorToChat` | false | per player: also copy NPC lines into chat |
+| `dialogueBoxAnchor`, `dialogueBoxOffsetX`, `dialogueBoxOffsetY` | `bottom_right`, 4, 56 | where the box sits: `top_left`, `top_right`, `bottom_left`, `bottom_right`, `top_center`, `bottom_center` |
+| `dialogueBoxWidth`, `dialogueBoxMaxLines`, `dialogueBoxScale`, `dialogueBoxOpacity` | 260, 8, 1.0, 0.6 | size, text scale (0.5-2) and background opacity (0-1) |
+| `dialogueBoxLineSeconds`, `dialogueBoxFadeSeconds`, `dialogueHistorySize` | 12, 2, 200 | how long lines stay, fade time, lines kept for scroll-back |
+| `sttMode` | `server` | per player: `server` (the Minecraft server transcribes, through Kagrenac), `direct` (this PC calls `sttDirectUrl`), `off` |
+| `sttDirectUrl`, `sttModel` | `http://127.0.0.1:8022/v1/audio/transcriptions`, `whisper-1` | for `direct`: any OpenAI-compatible transcription URL (Parakeet, faster-whisper-server, whisper.cpp `/inference`) |
+| `sttMicDevice`, `sttMaxSeconds`, `sttAutoSend` | empty, 15, true | microphone (part of its name; empty = default), longest recording, send the transcript right away (false: put it in the talk field first) |
+| `sttEnabled`, `sttUrl` | true, empty | server: accept recordings; empty `sttUrl` = Kagrenac's listen.php, or set an OpenAI-compatible URL to use without Kagrenac (key in the `TOI_STT_API_KEY` environment variable) |
+
+`/npc stt` shows where the server sends speech and the last result. The microphone names the mod can use are
+written to the log the first time you press push-to-talk.
 
 **Chat and memory**
 

@@ -357,7 +357,27 @@ optional language and an optional pitch (0.5 to 2.0, played by the game). You ca
   (`POST /upload_sample`, the same way CHIM adds voices). If PocketTTS was not running, start it and press
   **Send to PocketTTS again** next to the sample.
 
-Speech input (talking to NPCs with a microphone) is not in this version. It is on the [roadmap](ROADMAP.md).
+### Speech input: talk to NPCs with your microphone (server 0.3.8-toi, mod 0.3.8)
+
+1. In the DwemerDistro launcher, install and start **Parakeet** (speech to text; it runs on port 8022 and
+   answers `POST /v1/audio/transcriptions`, like CHIM uses it).
+2. On the dashboard, open **Configuration → Voice**, section **Speech to text**:
+   - Tick **Enabled**, keep **Parakeet (DwemerDistro, port 8022)** and the URL
+     `http://127.0.0.1:8022/v1/audio/transcriptions`, keep the model `whisper-1` (Parakeet ignores it), and
+     press **Save speech to text**. The page also says which speech services it finds running.
+   - Press **Record 5 seconds from the microphone** (or pick a WAV file and press **Transcribe**) and check
+     the transcript.
+   - Other choices: **Automatic** tries Parakeet (8022), faster-whisper (9876) and a whisper.cpp server
+     (8080) on this machine; **faster-whisper (DwemerDistro)**; **OpenAI-compatible** (any
+     `/v1/audio/transcriptions`, with an optional key on **API keys**); **whisper.cpp server** (`/inference`).
+3. In Minecraft, look at a companion or an MCA villager, **hold B**, speak, and let go. The box shows
+   **Listening...** and then **Transcribing...**, and the NPC answers. Change the key in **Options → Controls**.
+
+How it works: the game records 16 kHz mono WAV (at most `sttMaxSeconds`, 15 s), sends it to the Minecraft
+server in pieces, and the server sends it to Kagrenac's `listen.php`, which calls Parakeet. Players need nothing
+but the mod and a microphone. If speech to text is off or fails, the box says so and you can type (V) instead.
+`/npc stt` shows the server's setting and the last result. Single player can skip the server with
+`"sttMode": "direct"` (the game calls `sttDirectUrl` itself).
 
 ## 9. Optional: Minime and TXT2VEC (off by default)
 
@@ -533,6 +553,8 @@ that runs it"). That is on purpose: the dashboard has no password. Keep using it
 | `kagrenacEventQueueSize` | 200 | events kept while Kagrenac is unreachable |
 | `kagrenacRetryMaxSeconds` | 300 | longest pause between retries |
 | `kagrenacLogMobKills` | false | also send ordinary mobs killed by players |
+| `dialogueBox`, `mirrorToChat` | true, false | per player: NPC lines in the dialogue box instead of chat; also copy them to chat |
+| `sttMode`, `sttEnabled`, `sttUrl` | `server`, true, empty | speech input: the player's mode; the server accepts recordings and sends them to Kagrenac's listen.php (or `sttUrl`) |
 | `npcChatRadius`, `npcChatOwnerRadius` | 24, 64 | who sees NPC lines: nearby players, and the owner from further away |
 | `chatShowAiErrors` | false | show "can't think" error lines in chat instead of the quiet fallback |
 | `chatCompanionDeathNotice` | true | tell the owner (only) when their companion dies |

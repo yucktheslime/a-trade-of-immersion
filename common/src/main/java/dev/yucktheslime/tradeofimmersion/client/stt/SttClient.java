@@ -99,6 +99,12 @@ public final class SttClient {
             note("Didn't hear anything: check your microphone" + (ToiConfig.get().sttMicDevice.isBlank() ? "" : " (sttMicDevice)") + ".", true);
             return;
         }
+        submit(targetId, wav);
+    }
+
+    /** Transcribes a finished recording for the NPC with this entity id (also used by the dev test without a microphone). */
+    public static void submit(int npcEntityId, byte[] wav) {
+        targetId = npcEntityId;
         state = State.TRANSCRIBING;
         since = System.currentTimeMillis();
         ToiConfig cfg = ToiConfig.get();

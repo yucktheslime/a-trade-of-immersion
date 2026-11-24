@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.3.8
+- **NPC dialogue box.** Companion and MCA villager lines (including MCA's own villager lines) show in a box on the
+  screen instead of the main chat: an MCA-style dark panel with a gold frame, the speaker's name on a tab, names in
+  colour (companions blue, villagers gold, you grey), and lines that fade out after `dialogueBoxLineSeconds`.
+  Position, size, scale, opacity and timing are configurable; `mirrorToChat` also copies lines into chat. The
+  client tells the server it has the box (`dialogue_hello`), and only then does the server send companion lines as
+  `dialogue_line` payloads instead of chat; players without the mod or with `dialogueBox: false` still get chat.
+  MCA villager lines are moved into the box on the client by an optional mixin on MCA's
+  `ClientHandlerImpl.handleVillagerMessage` (MCA's own villager text-to-speech still runs).
+- **Talk field.** **V** (or **Enter** while looking at an NPC) opens a talk field for the NPC under the crosshair,
+  the one you look towards, or the last one that spoke; **Tab** cycles nearby NPCs, the wheel and PageUp/PageDown
+  scroll back, **H** opens the scroll-back. MCA's interaction screen gets a **Talk (AI)** button. The companion
+  menu's talk line uses the same path. Lines are sent with a `dialogue_talk` payload and never touch the main chat.
+- **Talking to MCA villagers directly:** a typed or spoken line to a villager is answered by this mod's AI backend
+  with its MCA profile (personality, mood, profession, hearts with you) and saved conversation.
+- **Push-to-talk speech to text.** Hold **B** (rebindable) to record 16 kHz mono WAV with `javax.sound.sampled`
+  (`sttMicDevice`, at most `sttMaxSeconds`). The recording goes to the Minecraft server in 30 KB `stt_chunk`
+  payloads (1 MB cap, one at a time per player), and the server sends it to Kagrenac's `listen.php` (or to an
+  OpenAI-compatible `sttUrl`). The transcript is said to the NPC (`sttAutoSend`) or put in the talk field.
+  "Listening..." with a level meter and "Transcribing..." show in the box; no microphone, speech input off, a
+  server without the mod and service errors are reported there, with typing as the fallback. `sttMode: "direct"`
+  lets a single-player game call an STT URL itself. `/npc stt` shows the setup and the last result.
+- **Kagrenac server 0.3.8-toi:** `listen.php` uses a new `lib/stt.php` with the providers `parakeet` (DwemerDistro,
+  port 8022, `/v1/audio/transcriptions`), `fasterwhisper` (port 9876), `openai` (any OpenAI-compatible
+  transcription API, optional key on **API keys**), `whispercpp` (`/inference`) and `auto` (finds a running
+  DwemerDistro service). The **Voice** page lists the new providers, shows which services are running and can
+  record 5 seconds from the browser's microphone for a test. New CI test with a Parakeet / faster-whisper /
+  whisper.cpp stub (`tests/stt_test.php`).
+- Unit tests (JUnit) for WAV building, chunk assembly, the STT HTTP client against a stub server, and the box
+  position; a dev client run checked the box, the talk screen, MCA's Talk button, a typed villager talk, a fake
+  push-to-talk recording through the server, and the chat fallback.
+
 ## 0.3.7
 - **Companions use MCA Reborn's villager model by default.** Every companion, new or existing, renders like an MCA
   villager: MCA's model with its skin, face, clothes and hair layers, its genes (size, width, skin and hair colour,

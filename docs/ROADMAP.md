@@ -33,7 +33,8 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 | Bundled server `kagrenac-server/` (13 actions, game events, bios, voice hints) for DwemerDistro | partial | tested on php -S + PostgreSQL; the real DwemerDistro install is not tested yet |
 | Companion + MCA villager bios (personality, profession, family) on the dashboard | done | game bios never overwrite operator edits |
 | Positional NPC voice through speak.php / PocketTTS | done | off by default; tested with pocket-tts behind a wrapper, captured to a file |
-| Speech input (push-to-talk) | planned | through Kagrenac `listen.php` (Parakeet): a push-to-talk key records the microphone and the text lands in the chat box for editing before it is sent |
+| Speech input (push-to-talk) | done (0.3.8) | hold B: the microphone goes through the Minecraft server to Kagrenac `listen.php` (Parakeet); the transcript is said to the NPC, or put in the talk field (`sttAutoSend: false`) |
+| Dedicated NPC dialogue box | done (0.3.8) | companion and MCA villager lines out of the main chat; talk field (V), scroll-back (H), Talk button in MCA's screen |
 | Real-model tuning (OpenRouter Gemma prompts for the 13 actions) | planned | needs play-testing with a key |
 
 ## Phase 2 - MCA relationships and family (next)
@@ -82,7 +83,6 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 - Learn from past mistakes: summarize failed actions and bad outcomes ("the creeper blew up my boat")
   into lessons stored per NPC and retrieved when a similar situation comes up, so failures are not repeated.
 - Long-term memory compaction (daily diary summaries) and retrieval by relevance instead of only "last N events".
-- Speech input (STT through Kagrenac's listen endpoint); TTS shipped in 0.3.0.
 
 ## Known limits (0.3.0)
 

@@ -56,20 +56,35 @@ public final class DialogueHud {
         int w = Math.max(120, Math.min(sw - 8, cfg.dialogueBoxWidth));
         Font font = mc.font;
         int maxLines = Math.max(1, Math.min(30, cfg.dialogueBoxMaxLines));
-        // wrap, newest last; keep only the last maxLines rows
-        List<FormattedCharSequence> rows = new ArrayList<>();
-        List<Float> alphas = new ArrayList<>();
-        for (DialogueClient.Entry e : recent) {
+        // whole entries, newest last, as many as fit in maxLines rows (a very long newest entry shows its end)
+        int extra = status != null ? 1 : 0;
+        int room = Math.max(1, maxLines - extra);
+        List<List<FormattedCharSequence>> picked = new ArrayList<>();
+        List<Float> pickedAlpha = new ArrayList<>();
+        int used = 0;
+        for (int i = recent.size() - 1; i >= 0 && used < room; i--) {
+            DialogueClient.Entry e = recent.get(i);
             long age = now - e.time();
             float a = age < show ? 1f : fade == 0 ? 0f : Math.max(0f, 1f - (age - show) / (float) fade);
-            for (FormattedCharSequence r : font.split(line(e), w - 10)) {
+            List<FormattedCharSequence> wrapped = font.split(line(e), w - 10);
+            if (used + wrapped.size() > room) {
+                if (!picked.isEmpty()) break;
+                wrapped = wrapped.subList(wrapped.size() - room, wrapped.size());
+            }
+            picked.add(0, wrapped);
+            pickedAlpha.add(0, a);
+            used += wrapped.size();
+        }
+        List<FormattedCharSequence> rows = new ArrayList<>();
+        List<Float> alphas = new ArrayList<>();
+        for (int i = 0; i < picked.size(); i++) {
+            for (FormattedCharSequence r : picked.get(i)) {
                 rows.add(r);
-                alphas.add(a);
+                alphas.add(pickedAlpha.get(i));
             }
         }
-        int extra = status != null ? 1 : 0;
-        int from = Math.max(0, rows.size() - (maxLines - extra));
-        int count = rows.size() - from + extra;
+        int from = 0;
+        int count = rows.size() + extra;
         if (count <= 0) return;
         float boxAlpha = 0f;
         for (int i = from; i < rows.size(); i++) boxAlpha = Math.max(boxAlpha, alphas.get(i));
