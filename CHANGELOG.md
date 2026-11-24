@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.2
+- **DwemerDistro launcher listing:** the server is now its own repository,
+  [yucktheslime/toi-kagrenac-server](https://github.com/yucktheslime/toi-kagrenac-server), published from
+  `kagrenac-server/`. It has a manifest version 2, the GitHub topic `kagrenac-mod` and stable releases.
+  - It shows in **Mods > Custom mods > Browse mods** (search `Trade of Immersion`).
+  - **Install server** installs it; **Install** also puts the NeoForge jar into the modpack's `mods/` folder.
+  - Once installed, it is listed under **Custom mods** with update, backup and dashboard links.
+- Launcher installs live at `http://127.0.0.1:19000/TradeOfImmersionServer` (database `custom_trade_of_immersion`).
+  This is the new default `kagrenacBaseUrl`.
+- The mod reads the launcher's private pairing file `mods/tradeofimmersion-kagrenac.json` (URL and token).
+  - It is used when `kagrenacToken` and the env var are empty and `kagrenacBaseUrl` is the default.
+  - On a first start with a pairing file, `aiBackend` is set to `kagrenac`.
+- **Fix (security):** the 0.3.0 `deploy_toi.sh` protected `/custom-mods/trade-of-immersion` but copied the server to
+  `/custom-mods/TradeOfImmersionServer`, so `config/config.php` answered HTTP 200 there.
+  - The script now installs to the protected `/custom-mods/trade-of-immersion` and moves an old copy there.
+  - It fails unless `config/`, `lib/`, `scripts/` and `sql/` answer 403.
+- New `scripts/move_to_launcher.sh` moves a manual install's database, settings and token into the launcher install.
+- Server 0.3.1-toi.
+
 ## 0.3.1
 - **Optional hosted server:** Kagrenac still runs on your PC by default. A Minecraft server elsewhere (Bisect or
   any host) can now use it through an https tunnel: `kagrenacBaseUrl` accepts any http/https URL, and

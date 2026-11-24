@@ -35,10 +35,44 @@ already have it: skip to step 2.
 
 In the DwemerDistro launcher, click **Update Distro** and wait for it to finish.
 
-The update gives you the `ddistro_custom_mod` tool and a patched PHP. The install script in step 3
-refuses to run without them.
+The update gives you the `ddistro_custom_mod` tool with release-package support (needed by **Browse mods**
+and **Install server** in step 3) and a patched PHP. Both install routes in step 3 refuse to run without them.
 
-## 3. Install the A Trade of Immersion server
+## 3. Install the A Trade of Immersion server from the launcher
+
+1. In the DwemerDistro launcher, open **Mods > Custom mods > Browse mods**.
+2. Search for `Trade of Immersion` and select **A Trade of Immersion** (by yucktheslime, Minecraft 1.21.1).
+3. Choose one of these:
+   - **Install server.** This installs only the server. You add the mod jar to your modpack yourself and
+     set the token in step 5.
+   - **Install.** This installs the server and also the mod jar. The launcher asks for your modpack's folder.
+     In CurseForge, right-click the profile and choose **Open Folder**. That folder must contain `options.txt`,
+     so start the modpack once before you do this.
+     - Close Minecraft first.
+     - The launcher puts `a-trade-of-immersion-neoforge-<version>.jar` into `mods/` and writes a private pairing
+       file next to it, `mods/tradeofimmersion-kagrenac.json`. The mod reads that file, so you can skip the
+       token in steps 5 and 6.
+     - Remove any other `a-trade-of-immersion` jar from `mods/`.
+4. Wait for the health check. **A Trade of Immersion** then shows under **Mods > Custom mods** as ready, with a
+   **Dashboard** link.
+
+The launcher installs the server in `/var/www/html/TradeOfImmersionServer`, with its own database
+`custom_trade_of_immersion` and a new random token. It turns on DwemerDistro's web protection before it copies
+anything, so the private config and source folders are never served. The server answers at:
+
+```
+http://127.0.0.1:19000/TradeOfImmersionServer
+```
+
+That is the mod's default `kagrenacBaseUrl`, so the mod config needs no change.
+
+**Updating later:** when a new version is out, select the mod under **Mods > Custom mods** and choose
+**Update**. Your settings, key, token and history are kept.
+
+### Manual install (fallback)
+
+Use this only if the launcher route does not work for you (for example, an old launcher without
+**Browse mods**).
 
 1. Open **PowerShell**: press the Windows key, type `PowerShell`, then press Enter.
 2. Find your distro's name:
@@ -55,39 +89,89 @@ refuses to run without them.
    ```
 
    The prompt changes to something like `dwemer@...:~$`.
-4. Paste these two lines. They download this mod's repository and install the server:
+4. Paste these two lines. They download the server and install it:
 
    ```bash
-   git clone https://github.com/yucktheslime/a-trade-of-immersion.git ~/a-trade-of-immersion
-   bash ~/a-trade-of-immersion/kagrenac-server/scripts/deploy_toi.sh
+   git clone https://github.com/yucktheslime/toi-kagrenac-server.git ~/toi-kagrenac-server
+   bash ~/toi-kagrenac-server/scripts/deploy_toi.sh
    ```
 
    - If it asks for a password, type the `dwemer` user's password. The DwemerDistro default is `dwemer`.
    - Nothing appears on screen while you type the password. That is normal.
 
    The script does four things:
-   - protects the server's private files from the web;
-   - copies the server to `/var/www/html/custom-mods/TradeOfImmersionServer`;
-   - creates a private config with a new random token;
-   - creates the database `trade_of_immersion_ai`.
+   - turns on DwemerDistro's web protection for `/custom-mods/trade-of-immersion` before it copies anything;
+   - copies the server to `/var/www/html/custom-mods/trade-of-immersion`;
+   - creates a private config with a new random token, and the database `trade_of_immersion_ai`;
+   - runs a health check, and stops with an error unless `config/config.php` answers **403**.
 
-   It ends with a health check. Success looks like this:
+   Success ends like this:
 
    ```
-   {"protocol":1,"ok":true,...,"server_version":"0.3.0-toi"}
-   OK: config is not served (HTTP 403).
+   OK: config/config.php is not served (HTTP 403).
+   ...
+   Mod config: "kagrenacBaseUrl": "http://127.0.0.1:19000/custom-mods/trade-of-immersion"
    ```
 
-**Updating later:** run this in the same distro shell. Your settings, key and history are kept.
+- A manual install answers at `http://127.0.0.1:19000/custom-mods/trade-of-immersion`. Set that as
+  `kagrenacBaseUrl` in step 6. It is not the mod's default.
+- A manual install does not show under **Custom mods** in the launcher. Only launcher installs do.
+- **Updating later:**
+
+  ```bash
+  git -C ~/toi-kagrenac-server pull && bash ~/toi-kagrenac-server/scripts/deploy_toi.sh
+  ```
+
+### Already installed by hand with version 0.3.0?
+
+The 0.3.0 script copied the server to `/var/www/html/custom-mods/TradeOfImmersionServer`, which DwemerDistro's
+web protection does not cover. Its `config/config.php` answers HTTP 200 instead of 403. Fix it now, in the
+distro shell, with one of these two options.
+
+**Option A: move to the launcher install (recommended).** Your conversations, memories, bios, dashboard
+settings and token are kept.
+
+1. Install the server from the launcher (step 3, **Install server** or **Install**).
+2. In the distro shell, run:
+
+   ```bash
+   git clone https://github.com/yucktheslime/toi-kagrenac-server.git ~/toi-kagrenac-server
+   bash ~/toi-kagrenac-server/scripts/move_to_launcher.sh
+   ```
+
+   The script:
+   - backs up both installs;
+   - copies the old database `trade_of_immersion_ai` into the launcher's `custom_trade_of_immersion`;
+   - copies the old config (so the OpenRouter key and the **token stay the same**);
+   - checks health and that `config/config.php` answers 403;
+   - moves the old folder out of the web server into `~/toi-move-backup-<time>/`.
+
+   The old database stays as it was. Once everything works, you can drop it with
+   `sudo -u postgres dropdb trade_of_immersion_ai`.
+3. In `config/tradeofimmersion.json`, set `kagrenacBaseUrl` back to the default,
+   `http://127.0.0.1:19000/TradeOfImmersionServer`, or delete the line. Then run `/npc ai reload` in game.
+
+**Option B: stay manual.** Run the new manual install (the four lines in "Manual install" above). It moves
+`custom-mods/TradeOfImmersionServer` into the protected folder `custom-mods/trade-of-immersion`, keeping the
+config, token and database, and checks for 403. Then set
+`"kagrenacBaseUrl": "http://127.0.0.1:19000/custom-mods/trade-of-immersion"` and run `/npc ai reload`.
+
+Check the result from the distro shell. The line for the route you use must print `403`
+(the first line is the launcher install, the second the manual one):
 
 ```bash
-git -C ~/a-trade-of-immersion pull && bash ~/a-trade-of-immersion/kagrenac-server/scripts/deploy_toi.sh
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:19000/TradeOfImmersionServer/config/config.php
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:19000/custom-mods/trade-of-immersion/config/config.php
 ```
+
+The old URL `.../custom-mods/TradeOfImmersionServer/...` should now
+answer 404.
 
 ## 4. Add your OpenRouter key (on the dashboard only)
 
-1. On Windows, open your browser at
-   <http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer/>
+1. On Windows, open the dashboard in your browser. Use the **Dashboard** link under **Mods > Custom mods**, or:
+   - launcher install: <http://127.0.0.1:19000/TradeOfImmersionServer/ui/>
+   - manual install: <http://127.0.0.1:19000/custom-mods/trade-of-immersion/>
 2. Go to **Configuration → API keys**. In **LLM API key**, paste your OpenRouter key (it starts
    with `sk-or-`), then click **Save keys**.
    - To make a key: <https://openrouter.ai/keys>.
@@ -99,17 +183,31 @@ git -C ~/a-trade-of-immersion pull && bash ~/a-trade-of-immersion/kagrenac-serve
 
 ## 5. Copy the server token
 
-Back in the distro shell (step 3), run:
+**Skip this step if the launcher's Install put the mod jar in your modpack.** The pairing file already holds the
+token.
 
-```bash
-sudo php -r '$c = require "/var/www/html/custom-mods/TradeOfImmersionServer/config/config.php"; echo $c["token"], PHP_EOL;'
-```
+Otherwise, in the distro shell (step 3, manual install, points 1 to 3), run the line for your install. It
+prints a long random token, which you need in the next step.
 
-It prints a long random token. You need it in the next step.
+- Launcher install:
+
+  ```bash
+  sudo php -r '$c = require "/var/www/html/TradeOfImmersionServer/config/config.php"; echo $c["token"], PHP_EOL;'
+  ```
+
+- Manual install:
+
+  ```bash
+  sudo php -r '$c = require "/var/www/html/custom-mods/trade-of-immersion/config/config.php"; echo $c["token"], PHP_EOL;'
+  ```
 
 ## 6. Point the mod at the server
 
-**Recommended: store the token in a Windows environment variable** (it stays out of all files)
+**If the launcher's Install put the mod jar in your modpack**, nothing is needed. On the first start without a
+config file, the mod finds the pairing file and switches to Kagrenac by itself. With an older config file, run
+`/npc ai preset kagrenac` once in game.
+
+**Otherwise, store the token in a Windows environment variable** (it stays out of all files):
 
 1. In a normal PowerShell window (not the distro shell), run the line below, using your own token:
 
@@ -134,13 +232,22 @@ It prints a long random token. You need it in the next step.
 
    ```json
    "aiBackend": "kagrenac",
-   "kagrenacBaseUrl": "http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer",
+   "kagrenacBaseUrl": "http://127.0.0.1:19000/TradeOfImmersionServer",
    "kagrenacToken": "",
    ```
 
-   - Leave `kagrenacToken` empty when you use the environment variable.
+   - Manual install: use `http://127.0.0.1:19000/custom-mods/trade-of-immersion` instead.
+   - Leave `kagrenacToken` empty when you use the environment variable or the launcher's pairing file.
    - You can put the token there instead. It is then stored in plain text, so never share that file.
 3. Save the file and run `/npc ai reload` in game.
+
+Where the token comes from, first match wins:
+
+1. the `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) environment variable;
+2. `kagrenacToken`;
+3. the launcher's pairing file `mods/tradeofimmersion-kagrenac.json`.
+
+The pairing file's URL is used only while `kagrenacBaseUrl` is left at the default.
 
 ## 7. Test it
 
@@ -153,8 +260,10 @@ In game, type:
 Good output contains:
 
 ```
-Kagrenac http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer: ready, server 0.3.0-toi, schema 008_game_bios, Minecraft actions (13 offered); token set; ...
+Kagrenac http://127.0.0.1:19000/TradeOfImmersionServer: ready, server 0.3.1-toi, schema 008_game_bios, Minecraft actions (13 offered); token set; ...
 ```
+
+With the launcher's pairing file it says `token set (launcher pairing)`.
 
 Then spawn a companion (`/npc spawn Elara female`) and talk to it in normal chat:
 
@@ -172,10 +281,11 @@ On the dashboard you can now see:
 
 | Status says | Fix |
 |---|---|
-| `token NOT SET` | Redo step 6 and restart CurseForge completely. |
+| `token NOT SET` | Redo steps 5 and 6 and restart CurseForge completely. |
 | `last error: ... HTTP 401 unauthorized` (after you talked to a companion) | The token is wrong. Copy it again (step 5). |
-| `unreachable (ConnectException)` | Start the DwemerDistro launcher. Check that the dashboard URL from step 4 opens in your browser. |
-| `template actions only` | The server is the plain Kagrenac template, or out of date. Run the update command from step 3. |
+| `unreachable (ConnectException)` | Start the DwemerDistro launcher. Check that the dashboard from step 4 opens in your browser, and that `kagrenacBaseUrl` matches your install (launcher or manual). |
+| `HTTP 404` | `kagrenacBaseUrl` points at the wrong route. Launcher: `/TradeOfImmersionServer`. Manual: `/custom-mods/trade-of-immersion`. |
+| `template actions only` | The server is the plain Kagrenac template, or out of date. Update it (step 3). |
 | NPC answers "...(I can't think straight right now)" | The LLM failed. Use **Send test** on the dashboard (step 4) to see why. |
 
 ## 8. Voice (optional, off by default)
@@ -239,8 +349,10 @@ players --> Minecraft server (Bisect) --> https tunnel --> your PC: DwemerDistro
 4. Your Kagrenac URL is that address plus the server path:
 
    ```
-   https://some-random-words.trycloudflare.com/custom-mods/TradeOfImmersionServer
+   https://some-random-words.trycloudflare.com/TradeOfImmersionServer
    ```
+
+   For a manual install, the path is `/custom-mods/trade-of-immersion` instead.
 
 - A quick tunnel gets a **new address every time you start it**. Then update `kagrenacBaseUrl` on the
   host (step "Edit the config on the host" below) each time. For a fixed address, create a free
@@ -271,7 +383,7 @@ players --> Minecraft server (Bisect) --> https tunnel --> your PC: DwemerDistro
 4. Your Kagrenac URL:
 
    ```
-   https://my-pc.tail1234.ts.net/custom-mods/TradeOfImmersionServer
+   https://my-pc.tail1234.ts.net/TradeOfImmersionServer
    ```
 
 ### Check the tunnel
@@ -280,7 +392,8 @@ Open `<your Kagrenac URL>/health.php` in a browser. You should see `{"protocol":
 
 The **dashboard does not open through the tunnel** (it answers "The dashboard is only available on the PC
 that runs it"). That is on purpose: the dashboard has no password. Keep using it on your PC at
-<http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer/>.
+<http://127.0.0.1:19000/TradeOfImmersionServer/ui/> (manual install:
+<http://127.0.0.1:19000/custom-mods/trade-of-immersion/>).
 
 ### Edit the config on the host
 
@@ -291,7 +404,7 @@ that runs it"). That is on purpose: the dashboard has no password. Keep using it
 
    ```json
    "aiBackend": "kagrenac",
-   "kagrenacBaseUrl": "https://some-random-words.trycloudflare.com/custom-mods/TradeOfImmersionServer",
+   "kagrenacBaseUrl": "https://some-random-words.trycloudflare.com/TradeOfImmersionServer",
    "kagrenacToken": "paste-the-token-here",
    ```
 
@@ -304,7 +417,7 @@ that runs it"). That is on purpose: the dashboard has no password. Keep using it
 4. Start the server. In the console you should see:
 
    ```
-   AI backend: kagrenac(https://some-random-words.trycloudflare.com/custom-mods/TradeOfImmersionServer, remote)
+   AI backend: kagrenac(https://some-random-words.trycloudflare.com/TradeOfImmersionServer, remote)
    ```
 
 5. As an op, run `/npc ai status` in game. It should say `(remote): ready ... token set`.
@@ -335,8 +448,8 @@ that runs it"). That is on purpose: the dashboard has no password. Keep using it
 | Key | Default | Meaning |
 |---|---|---|
 | `aiBackend` | `openai` | set to `kagrenac` (or run `/npc ai preset kagrenac`) |
-| `kagrenacBaseUrl` | `http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer` | the server; any http/https URL, such as a tunnel (step 9) |
-| `kagrenacToken` | empty | the server token; the `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) environment variable overrides it. Required for a remote URL |
+| `kagrenacBaseUrl` | `http://127.0.0.1:19000/TradeOfImmersionServer` | the server: the launcher route by default; manual install `.../custom-mods/trade-of-immersion`; any http/https URL, such as a tunnel (step 9) |
+| `kagrenacToken` | empty | the server token; the `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) environment variable overrides it; when empty, the launcher pairing file is used. Required for a remote URL |
 | `kagrenacSessionId` | empty | history is kept per session; empty = `mc-<world name>` |
 | `kagrenacAllowedActions` | all 13 | actions the game will run; remove any you do not want |
 | `kagrenacLogEvents` | true | send deaths, damage, gifts, villager talk and family changes |

@@ -83,14 +83,23 @@ Set `aiBaseUrl` (for example `http://localhost:1234/v1` for LM Studio), `aiModel
 **Step-by-step guide for Windows and CurseForge: [docs/KAGRENAC_SETUP.md](docs/KAGRENAC_SETUP.md).**
 
 You do not load anything extra in CurseForge. The server runs in DwemerDistro, the same local server
-package CHIM uses. In short:
+package CHIM uses, and is listed in the DwemerDistro launcher. In short:
 
 1. Install DwemerDistro and run **Update Distro**.
-2. In the distro shell, run `git clone` on this repository, then `kagrenac-server/scripts/deploy_toi.sh`.
-3. On the dashboard (`http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer/`), paste your OpenRouter key
-   under **API keys**. The server comes set to Gemma.
-4. Put the server token in the `TOI_KAGRENAC_TOKEN` environment variable.
+2. In the launcher, open **Mods > Custom mods > Browse mods**, search `Trade of Immersion` and choose
+   **Install server**.
+   - Or choose **Install**: this also puts the mod jar in your modpack's `mods/` folder and pairs it, so no token
+     setup is needed.
+   - The server repository is [yucktheslime/toi-kagrenac-server](https://github.com/yucktheslime/toi-kagrenac-server).
+3. On the dashboard (**Custom mods > Dashboard**, or `http://127.0.0.1:19000/TradeOfImmersionServer/ui/`), paste
+   your OpenRouter key under **API keys**. The server comes set to Gemma.
+4. Unless the launcher paired the mod, put the server token in the `TOI_KAGRENAC_TOKEN` environment variable.
 5. In game, run `/npc ai preset kagrenac`, then `/npc ai status`.
+
+- Manual install (fallback): `scripts/deploy_toi.sh` from the server repository. It serves the server at
+  `http://127.0.0.1:19000/custom-mods/trade-of-immersion`.
+- Installed by hand with 0.3.0? That copy's config was not protected. See
+  [Already installed by hand](docs/KAGRENAC_SETUP.md#already-installed-by-hand-with-version-030).
 
 What you get with the bundled server ([kagrenac-server/](kagrenac-server/MINECRAFT.md)):
 
@@ -112,7 +121,7 @@ A plain upstream Kagrenac template server also works, but only with its 3 action
 
 **Hosted server (Bisect etc.), optional:** Kagrenac stays on your PC, and a Minecraft server at a host connects to it
 through an https tunnel (Cloudflare quick tunnel or Tailscale Funnel). Set `kagrenacBaseUrl` to the tunnel URL plus
-`/custom-mods/TradeOfImmersionServer` and `kagrenacToken` in the host's config file. Events are queued while your PC is
+`/TradeOfImmersionServer` and `kagrenacToken` in the host's config file. Events are queued while your PC is
 off, and players' chat stays clean. See
 [step 9 of the guide](docs/KAGRENAC_SETUP.md#9-optional-connect-a-hosted-server-bisect-etc).
 
@@ -188,8 +197,8 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `aiMaxRequestsPerMinute` | 20 | global cap on AI calls |
 | `aiMinSecondsBetweenTurns` | 2 | per-companion gap; newer triggers wait, latest wins |
 | `aiFallbackToMock`, `aiFailureCooldownSeconds` | true, 60 | behavior when the backend is down |
-| `kagrenacBaseUrl` | `http://127.0.0.1:19000/custom-mods/TradeOfImmersionServer` | Kagrenac server; any http/https URL, e.g. a tunnel to your PC for a hosted server |
-| `kagrenacToken` | empty | server token; env `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) overrides it; required for a remote URL |
+| `kagrenacBaseUrl` | `http://127.0.0.1:19000/TradeOfImmersionServer` | Kagrenac server (the launcher route; manual install: `.../custom-mods/trade-of-immersion`); any http/https URL, e.g. a tunnel to your PC for a hosted server |
+| `kagrenacToken` | empty | server token; env `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) overrides it; when empty, the launcher pairing file `mods/tradeofimmersion-kagrenac.json` is used; required for a remote URL |
 | `kagrenacSessionId` | empty | defaults to `mc-<world name>` |
 | `kagrenacAllowedActions` | all 13 | the client-side action allowlist |
 | `kagrenacLogEvents`, `kagrenacSyncBios`, `kagrenacUseDecision`, `kagrenacCancelOnInterrupt` | true | events, bios, NPC selection, cancel on interruption |
