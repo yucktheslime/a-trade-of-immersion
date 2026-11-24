@@ -350,8 +350,9 @@ optional language and an optional pitch (0.5 to 2.0, played by the game). You ca
   the NPC with the same name** ticked, `Steve.wav` goes to the NPC named Steve and `Old_Tom.wav` goes to
   Old Tom. A table shows the result for every file.
 - Zips with unsafe paths (`../`, absolute paths), links or encrypted entries are refused. The limits are
-  200 files, 15 MB per sample and 200 MB unpacked. PHP's own upload limit is shown on the page. If the
-  zip is larger than that, split it into several zips.
+  200 files, 15 MB per sample and 200 MB unpacked. PHP's own upload limit is shown on the page (many
+  setups default to 2 MB). Raise `upload_max_filesize` and `post_max_size` (for example 100M and 110M) in
+  the PHP settings of the DwemerDistro or web host, or split the samples into several zips.
 - The samples are kept in `config/voices/`, which the web server does not serve, and added to PocketTTS
   (`POST /upload_sample`, the same way CHIM adds voices). If PocketTTS was not running, start it and press
   **Send to PocketTTS again** next to the sample.

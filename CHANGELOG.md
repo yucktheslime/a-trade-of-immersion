@@ -20,7 +20,8 @@
   voice sample (WAV; MP3/OGG/FLAC when ffmpeg is installed), or a **zip of samples** that are all added at once,
   with a per-file result table. You can optionally give each sample to the NPC with the same name (`Steve.wav` goes
   to Steve). Samples are stored in `config/voices/` and sent to PocketTTS `POST /upload_sample`. Changes need the
-  server token. Zips are checked for path traversal, links, encryption and size.
+  server token. Zips are checked for path traversal, links, encryption and size. PHP's upload limit is shown on
+  the page.
 - Server 0.3.5-toi: `npc_voice.php` (game endpoint for `/npc voice`), `speak.php` accepts `npc_name` and
   answers `X-Voice-Pitch`, capability `npc_voices`. Includes the plugins work below (it had not been released).
 
