@@ -50,10 +50,10 @@ public final class VoiceClient {
         CLIPS.remove(p.clipId());
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         for (byte[] b : c.parts) out.writeBytes(b);
-        play(p.entityId(), out.toByteArray());
+        play(p.entityId(), out.toByteArray(), p.pitch());
     }
 
-    private static void play(int entityId, byte[] wav) {
+    private static void play(int entityId, byte[] wav, float pitch) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         Entity e = mc.level.getEntity(entityId);
@@ -69,7 +69,7 @@ public final class VoiceClient {
         }
         NpcVoiceInstance old = PLAYING.remove(entityId);
         if (old != null) mc.getSoundManager().stop(old); // a newer line interrupts the old one
-        NpcVoiceInstance inst = new NpcVoiceInstance(e, stream, cfg.voiceVolume, cfg.voiceRange);
+        NpcVoiceInstance inst = new NpcVoiceInstance(e, stream, cfg.voiceVolume, cfg.voiceRange, pitch);
         PLAYING.put(entityId, inst);
         PLAYING.values().removeIf(i -> i.isStopped() || i.speaker().isRemoved());
         mc.getSoundManager().play(inst);

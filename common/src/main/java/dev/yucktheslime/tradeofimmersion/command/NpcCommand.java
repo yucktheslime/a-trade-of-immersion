@@ -61,6 +61,7 @@ public final class NpcCommand {
                                         .executes(c -> spawn(c, StringArgumentType.getString(c, "name"), StringArgumentType.getString(c, "gender"),
                                                 StringArgumentType.getString(c, "skin")))))));
         root.then(Commands.literal("list").executes(NpcCommand::list));
+        root.then(VoiceCommand.build());
         root.then(Commands.literal("ai").then(Commands.literal("status")
                         .requires(s -> s.hasPermission(2) || ToiConfig.get().statusForEveryone).executes(NpcCommand::aiStatus))
                 .then(Commands.literal("reload").requires(s -> s.hasPermission(2)).executes(c -> {
@@ -102,8 +103,14 @@ public final class NpcCommand {
         root.then(Commands.literal("skin").then(npc().then(Commands.argument("skin", StringArgumentType.greedyString()).executes(c -> {
             CompanionEntity n = owned(c);
             String s = StringArgumentType.getString(c, "skin").trim();
+            if (s.equalsIgnoreCase("mca")) {
+                dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.setLook(c.getSource().getServer(), n, true);
+                c.getSource().sendSuccess(() -> Component.literal(n.name() + " now uses the MCA villager look (change it with MCA's villager editor)."), false);
+                return 1;
+            }
+            dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.setLook(c.getSource().getServer(), n, false);
             if (s.equalsIgnoreCase("slim") || s.equalsIgnoreCase("wide")) n.setSlim(s.equalsIgnoreCase("slim"));
-            else n.setSkin(s.equalsIgnoreCase("default") ? "" : s);
+            else n.setSkin(s.equalsIgnoreCase("default") || s.equalsIgnoreCase("player") ? "" : s);
             c.getSource().sendSuccess(() -> Component.literal(n.name() + " skin: " + (n.getSkin().isEmpty() ? "default" : n.getSkin()) + (n.isSlim() ? " (slim arms)" : "")), false);
             return 1;
         }))));

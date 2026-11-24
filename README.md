@@ -146,8 +146,18 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
   - Only real dialogue reaches companions. Command feedback, advancements, death messages, typed commands and error codes are ignored.
 - **Inventory:**
   - **Shift + right-click** opens their bag: 39 slots, plus a bottom row of head, chest, legs, feet, main hand, off hand.
-  - Right-click while holding an item to hand it over. They notice the gift and may inspect it.
-- **Right-click with an empty hand** toggles follow / stay.
+  - **Give held item** in the menu (below) hands over what you hold. They notice the gift and may inspect it.
+- **Right-click** opens the companion's menu, laid out like MCA's: **Follow / Stay / Wander**, **Inventory**,
+  **Give held item**, **Edit (MCA editor)**, **Clothes**, **Hair**, **Voice**, and a line to talk to it.
+  Set `companionMenuOnRightClick` to `false` for the old clicks (right-click toggles follow / stay or hands over the held item).
+- **MCA's villager editor, needle and thread, and comb** work on companions. Right-click with the item (or use the
+  menu buttons). Name, gender, genes, personality, traits, skin, face, clothes, hair and colors are saved for the
+  companion and shown to everyone. Changing skin, clothes or hair switches it from its player skin to the MCA
+  villager look. `/npc skin <npc> player` goes back to the player skin, and `/npc skin <npc> mca` goes to the MCA look.
+  The owner or an operator can edit (anyone with the editor item if `mcaEditorItemForEveryone` is on).
+- **Voice:** every companion and MCA villager has its own voice. Change it in the menu's **Voice** button, with
+  `/npc voice ...`, or on the Kagrenac dashboard, where you can also upload voice samples one by one or as a zip
+  ([Kagrenac setup, section 8](docs/KAGRENAC_SETUP.md#voices-for-each-npc-server-035-toi-mod-035)).
 - **Ask them to do things.** The AI picks from these actions:
   - `follow`, `stay`
   - `goto`

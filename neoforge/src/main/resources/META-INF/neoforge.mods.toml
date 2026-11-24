@@ -12,6 +12,10 @@ description = '''
 AI companions for MCA Reborn: a player-like NPC with a real inventory that uses any mod's items, rides horses, boats and modded mounts, fights, remembers what happens around it, learns items and talks with MCA villagers. Runs on a free local LLM (Ollama) or any OpenAI-compatible API (OpenRouter), or a Kagrenac server.
 '''
 
+# MCA Reborn villager editor, needle and comb on companions (common mixins).
+[[mixins]]
+config = "tradeofimmersion.mixins.json"
+
 # Optional client compat with "MCA: Female Gender Physics" (mcabp); a mixin plugin skips it when that mod is absent.
 [[mixins]]
 config = "tradeofimmersion.mcabp.mixins.json"

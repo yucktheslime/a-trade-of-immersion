@@ -9,7 +9,6 @@ import dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld;
 import dev.yucktheslime.tradeofimmersion.config.ToiConfig;
 import dev.yucktheslime.tradeofimmersion.util.QuietLog;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
@@ -37,18 +36,20 @@ public final class VoiceSync {
     private static volatile String lastStatus = "no line voiced yet";
 
     /** One piece of a WAV clip for the entity; the client plays the clip when all {@code total} pieces arrived. */
-    public record VoiceChunkPayload(int entityId, int clipId, int index, int total, boolean villager, byte[] data)
+    public record VoiceChunkPayload(int entityId, int clipId, int index, int total, boolean villager, float pitch, byte[] data)
             implements CustomPacketPayload {
         public static final Type<VoiceChunkPayload> TYPE =
                 new Type<>(ResourceLocation.fromNamespaceAndPath(TradeOfImmersion.MOD_ID, "npc_voice"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, VoiceChunkPayload> CODEC = StreamCodec.composite(
-                ByteBufCodecs.VAR_INT, VoiceChunkPayload::entityId,
-                ByteBufCodecs.VAR_INT, VoiceChunkPayload::clipId,
-                ByteBufCodecs.VAR_INT, VoiceChunkPayload::index,
-                ByteBufCodecs.VAR_INT, VoiceChunkPayload::total,
-                ByteBufCodecs.BOOL, VoiceChunkPayload::villager,
-                ByteBufCodecs.byteArray(CHUNK), VoiceChunkPayload::data,
-                VoiceChunkPayload::new);
+        public static final StreamCodec<RegistryFriendlyByteBuf, VoiceChunkPayload> CODEC = StreamCodec.of((buf, p) -> {
+            buf.writeVarInt(p.entityId());
+            buf.writeVarInt(p.clipId());
+            buf.writeVarInt(p.index());
+            buf.writeVarInt(p.total());
+            buf.writeBoolean(p.villager());
+            buf.writeFloat(p.pitch());
+            buf.writeByteArray(p.data());
+        }, buf -> new VoiceChunkPayload(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
+                buf.readFloat(), buf.readByteArray(CHUNK)));
 
         @Override
         public Type<? extends CustomPacketPayload> type() {
@@ -91,7 +92,8 @@ public final class VoiceSync {
         MinecraftServer srv = level.getServer();
         int entityId = speaker.getId();
         long started = System.currentTimeMillis();
-        k.speak(line, npcId, parentRequestId, voiceHint).whenComplete((wav, err) -> {
+        String npcName = speaker.getName().getString();
+        k.speak(line, npcId, npcName, parentRequestId, voiceHint).whenComplete((speech, err) -> {
             PENDING.decrementAndGet();
             if (err != null) {
                 Throwable c = err.getCause() != null ? err.getCause() : err;
@@ -99,7 +101,7 @@ public final class VoiceSync {
                 QuietLog.warn("npc-voice", "NPC voice failed: {}", c.toString());
                 return;
             }
-            srv.execute(() -> send(level, entityId, villager, wav, System.currentTimeMillis() - started));
+            srv.execute(() -> send(level, entityId, villager, speech.wav(), speech.pitch(), System.currentTimeMillis() - started));
         });
     }
 
@@ -108,7 +110,7 @@ public final class VoiceSync {
         return level.players().stream().filter(pl -> pl.distanceToSqr(speaker) < r * r).toList();
     }
 
-    private static void send(ServerLevel level, int entityId, boolean villager, byte[] wav, long fetchMs) {
+    private static void send(ServerLevel level, int entityId, boolean villager, byte[] wav, float pitch, long fetchMs) {
         Entity e = level.getEntity(entityId);
         if (e == null || wav == null || wav.length > MAX_BYTES) return;
         List<ServerPlayer> near = nearby(level, e);
@@ -117,7 +119,7 @@ public final class VoiceSync {
         int total = (wav.length + CHUNK - 1) / CHUNK;
         for (int i = 0; i < total; i++) {
             byte[] part = Arrays.copyOfRange(wav, i * CHUNK, Math.min(wav.length, (i + 1) * CHUNK));
-            NetworkManager.sendToPlayers(near, new VoiceChunkPayload(entityId, clip, i, total, villager, part));
+            NetworkManager.sendToPlayers(near, new VoiceChunkPayload(entityId, clip, i, total, villager, pitch, part));
         }
         lastStatus = "voiced " + e.getName().getString() + ": " + wav.length + " bytes to " + near.size() + " player(s), fetched in " + fetchMs + " ms";
         TradeOfImmersion.LOGGER.debug("NPC voice: {}", lastStatus);

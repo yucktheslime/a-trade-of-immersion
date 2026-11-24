@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.yucktheslime.tradeofimmersion.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "GetVillagerRequestMixin",
+    "VillagerEditorSyncRequestMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

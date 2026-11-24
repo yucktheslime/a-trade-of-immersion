@@ -43,6 +43,14 @@ public final class CompanionBodyStore {
                 if (o.has("genes")) {
                     for (var g : o.getAsJsonObject("genes").entrySet()) d.genes.put(g.getKey(), g.getValue().getAsFloat());
                 }
+                if (o.has("look")) d.look = o.get("look").getAsString();
+                if (o.has("mca")) {
+                    try {
+                        d.mca = net.minecraft.nbt.TagParser.parseTag(o.get("mca").getAsString());
+                    } catch (Exception bad) {
+                        TradeOfImmersion.LOGGER.warn("Ignoring unreadable MCA appearance for companion {}", e.getKey());
+                    }
+                }
                 data.put(UUID.fromString(e.getKey()), d);
             }
         } catch (Exception ex) {
@@ -78,6 +86,8 @@ public final class CompanionBodyStore {
             JsonObject g = new JsonObject();
             d.genes.forEach(g::addProperty);
             o.add("genes", g);
+            if (d.look != null) o.addProperty("look", d.look);
+            if (d.mca != null && !d.mca.isEmpty()) o.addProperty("mca", d.mca.toString()); // SNBT
             root.add(id.toString(), o);
         });
         try {

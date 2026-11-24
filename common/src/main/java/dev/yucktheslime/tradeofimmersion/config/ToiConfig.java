@@ -133,6 +133,14 @@ public final class ToiConfig {
     /** Let non-op players run /npc ai status (backend, errors, queue). Off: ops only. */
     public boolean statusForEveryone = false;
 
+    // ---- companion menu, MCA editor and NPC voice profiles ----
+    /** Right-clicking a companion opens its menu (talk, follow/stay, inventory, gift, MCA editor, voice). Off: the old clicks (owner click toggles follow/stay, gives the held item). */
+    public boolean companionMenuOnRightClick = true;
+    /** Anyone holding MCA's villager editor item may edit any companion (like MCA villagers). Off: owner or operator only. */
+    public boolean mcaEditorItemForEveryone = false;
+    /** Let non-op players change MCA villagers' voices with /npc voice (companions: their owner always can). Single-player always can. */
+    public boolean villagerVoiceForEveryone = false;
+
     // ---- companions ----
     /** Players within this many blocks of a companion are heard by it. */
     public double chatHearingRadius = 16.0;

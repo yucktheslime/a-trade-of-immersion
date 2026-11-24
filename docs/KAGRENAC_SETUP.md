@@ -308,11 +308,10 @@ On the dashboard you can now see:
 How the voice works:
 
 - Replies are spoken from the NPC's position, so they get quieter with distance (`voiceRange`, 24 blocks).
-- Female and male NPCs get different voices, and each NPC always keeps the same voice. The voices come
-  from PocketTTS's own speaker list: the `voice_hints` names it has, otherwise its speakers whose names
-  start with `female` or `male` (CHIM voices such as `femalenord`), otherwise the voice you picked.
-  The Voice page shows what each hint picks from. A voice PocketTTS does not have falls back to its
-  first speaker. You can choose a fixed voice per NPC on the dashboard's **Profiles** page.
+- Every NPC has its own voice profile (see **Voices for each NPC** below). The first time an NPC speaks,
+  the server gives it a PocketTTS speaker that no other NPC uses yet, female or male when the speaker
+  names say so (`voice_hints`, or CHIM names such as `femalenord`), and it keeps that voice. A voice
+  PocketTTS does not have falls back to its first speaker.
 - Server 0.3.1 and older sent voice to `http://127.0.0.1:8086/v1/audio/speech` (audio.cpp), which the
   launcher's PocketTTS on port 8024 does not answer (HTTP 404). Update the server; an old saved
   `pockettts` setting then also falls over to port 8024 by itself.
@@ -320,6 +319,42 @@ How the voice works:
 - On a multiplayer server, only the Minecraft server talks to Kagrenac. It fetches each spoken line and
   streams the audio to the players near the NPC. Players need nothing but the mod: no URL, no token.
   Each player can mute NPC voices for themselves with `"voicePlay": false` in their own config.
+
+### Voices for each NPC (server 0.3.5-toi, mod 0.3.5)
+
+Each companion and each MCA villager has its own voice profile on the Kagrenac server: a speaker, an
+optional language and an optional pitch (0.5 to 2.0, played by the game). You can change it in three places:
+
+- **Dashboard → Configuration → NPC voices.** Every NPC that has spoken (or has a bio) is listed. Pick a
+  speaker, language and pitch and press **Save**. Choose **(automatic)** to go back to an automatic voice.
+  Saving needs the **server token** (the `token` in `config/config.php`, the same one the game uses).
+- **The companion menu.** Right-click a companion, press **Voice**, and click a speaker. **Pitch -** and
+  **Pitch +** change the pitch. **Automatic** goes back to an automatic voice.
+- **Commands** (look at the NPC, or add its name or id at the end):
+  - `/npc voice list` shows PocketTTS's speakers and the NPCs' voices.
+  - `/npc voice show [npc]`
+  - `/npc voice set <speaker> [npc]` and `/npc voice auto [npc]`
+  - `/npc voice pitch <0.5-2.0> [npc]` and `/npc voice language <code|default> [npc]`
+
+  A companion's owner (or an operator) can change its voice. In single player you can change anyone's.
+  On a server only operators can change villagers' voices, unless `villagerVoiceForEveryone` is `true`.
+
+**Upload your own voices** on the same **NPC voices** page:
+
+- **Upload one voice sample:** a short, clean recording of one speaker (5 to 15 seconds of WAV works
+  best). The voice is named after the file (`Steve.wav` becomes `Steve`), or type a name. You can give it
+  to an NPC straight away.
+- **Upload many samples (zip):** zip your folder of samples and upload the zip. Every `.wav` (and `.mp3`,
+  `.ogg` or `.flac` when `ffmpeg` is installed in DwemerDistro: `sudo apt install ffmpeg`) becomes a
+  speaker named after its file. Subfolders are fine. Other files are skipped. With **Give each sample to
+  the NPC with the same name** ticked, `Steve.wav` goes to the NPC named Steve and `Old_Tom.wav` goes to
+  Old Tom. A table shows the result for every file.
+- Zips with unsafe paths (`../`, absolute paths), links or encrypted entries are refused. The limits are
+  200 files, 15 MB per sample and 200 MB unpacked. PHP's own upload limit is shown on the page. If the
+  zip is larger than that, split it into several zips.
+- The samples are kept in `config/voices/`, which the web server does not serve, and added to PocketTTS
+  (`POST /upload_sample`, the same way CHIM adds voices). If PocketTTS was not running, start it and press
+  **Send to PocketTTS again** next to the sample.
 
 Speech input (talking to NPCs with a microphone) is not in this version. It is on the [roadmap](ROADMAP.md).
 

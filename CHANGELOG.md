@@ -1,6 +1,30 @@
 # Changelog
 
-## Unreleased
+## 0.3.5
+- **Companion menu on right-click** (MCA-style): Follow / Stay / Wander, Inventory, Give held item, Edit (MCA
+  editor), Clothes (needle and thread), Hair (comb), Voice, and a line to talk to the companion. Shift + right-click
+  still opens the bag. `companionMenuOnRightClick: false` restores the old clicks. MCA's own interaction screen
+  needs an MCA villager entity (its brain, memories and family tree), so companions get this menu instead.
+- **MCA's villager editor, needle and thread, and comb work on companions.** MCA's real screens open on the
+  companion. Two small mixins answer MCA's editor requests for companions and apply what it saves: name, gender,
+  genes, personality, traits, and the skin, face, clothes, hair and colors. These are saved in the world
+  (`companion_bodies.json`) and synced to all players. Editing the look switches that companion to the MCA
+  villager look; `/npc skin <npc> player|mca` switches back and forth. New config keys: `mcaEditorItemForEveryone`
+  (default off).
+- **A voice profile for every NPC** (companions and MCA villagers), kept on the Kagrenac server (migration
+  `011_npc_voices`). Each NPC automatically gets a distinct PocketTTS speaker on its first line (female or male
+  when the speaker names say so) and keeps it. Change it with the menu's Voice picker, `/npc voice
+  list|show|set|auto|pitch|language`, or the dashboard. Pitch is applied by the game. New config key:
+  `villagerVoiceForEveryone`.
+- **Dashboard: Configuration > NPC voices.** Lists the NPCs with their voice, language and pitch, lets you upload a
+  voice sample (WAV; MP3/OGG/FLAC when ffmpeg is installed), or a **zip of samples** that are all added at once,
+  with a per-file result table. You can optionally give each sample to the NPC with the same name (`Steve.wav` goes
+  to Steve). Samples are stored in `config/voices/` and sent to PocketTTS `POST /upload_sample`. Changes need the
+  server token. Zips are checked for path traversal, links, encryption and size.
+- Server 0.3.5-toi: `npc_voice.php` (game endpoint for `/npc voice`), `speak.php` accepts `npc_name` and
+  answers `X-Voice-Pitch`, capability `npc_voices`. Includes the plugins work below (it had not been released).
+
+## Unreleased (folded into 0.3.5)
 - **Server plugins:** a Plugins page on the dashboard (Configuration) where you can enable, disable,
   configure, install (zip or GitHub URL) and remove server plugins.
   - Each plugin is a folder with `plugin.json` and `plugin.php`. Hooks: prompt or context injectors,

@@ -522,14 +522,19 @@ public final class KagrenacBackend implements AiBackend {
         });
     }
 
+    /** One voiced line: the WAV and the pitch from the NPC's voice profile (1.0 when it has none). */
+    public record Speech(byte[] wav, float pitch) {
+    }
+
     /** speak.php: WAV bytes for a line (fetched by the Minecraft server, then streamed to nearby players). */
-    public CompletableFuture<byte[]> speak(String text, String npcId, String parentRequestId, String voiceHint) {
+    public CompletableFuture<Speech> speak(String text, String npcId, String npcName, String parentRequestId, String voiceHint) {
         JsonObject b = new JsonObject();
         b.addProperty("protocol", 1);
         b.addProperty("request_id", newRequestId("tts"));
         if (parentRequestId != null && parentRequestId.matches("[A-Za-z0-9_.:-]{8,64}")) b.addProperty("parent_request_id", parentRequestId);
         if (npcId != null && !npcId.isBlank()) b.addProperty("npc_id", safeId(npcId));
         if (voiceHint != null && voiceHint.matches("[a-z_]{1,16}")) b.addProperty("voice_hint", voiceHint);
+        if (npcName != null && !npcName.isBlank()) b.addProperty("npc_name", cut(npcName.replaceAll("\\s+", " ").trim(), 64));
         b.addProperty("text", cut(text, 1000));
         HttpRequest.Builder rb;
         try {
@@ -551,7 +556,35 @@ public final class KagrenacBackend implements AiBackend {
             if (wav.length < 44 || wav[0] != 'R' || wav[1] != 'I' || wav[2] != 'F' || wav[3] != 'F' || wav[8] != 'W' || wav[9] != 'A' || wav[10] != 'V' || wav[11] != 'E') {
                 throw new IllegalStateException("speak.php did not return a WAV");
             }
-            return wav;
+            float pitch = 1f;
+            try {
+                pitch = resp.headers().firstValue("X-Voice-Pitch").map(Float::parseFloat).orElse(1f);
+            } catch (NumberFormatException ignored) {
+            }
+            return new Speech(wav, Math.max(0.5f, Math.min(2f, pitch)));
+        });
+    }
+
+    /**
+     * npc_voice.php (per-NPC voice profiles, server 0.3.5-toi+). The answer JSON is returned for errors too (with
+     * {@code ok:false} and {@code error.message}), so commands and the menu can show the server's reason.
+     */
+    public CompletableFuture<JsonObject> npcVoice(JsonObject body) {
+        body.addProperty("protocol", 1);
+        HttpRequest.Builder rb;
+        try {
+            rb = request("npc_voice.php", 15).POST(HttpRequest.BodyPublishers.ofString(body.toString()));
+        } catch (RuntimeException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+        return http.sendAsync(rb.build(), HttpResponse.BodyHandlers.ofString()).thenApply(resp -> {
+            try {
+                JsonObject o = JsonParser.parseString(resp.body()).getAsJsonObject();
+                o.addProperty("_status", resp.statusCode());
+                return o;
+            } catch (Exception e) {
+                throw new IllegalStateException("npc_voice.php HTTP " + resp.statusCode() + (resp.statusCode() == 404 ? " (update the Kagrenac server to 0.3.5)" : ""));
+            }
         });
     }
 

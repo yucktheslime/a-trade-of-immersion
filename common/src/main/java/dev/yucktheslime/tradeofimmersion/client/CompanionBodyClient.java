@@ -87,10 +87,21 @@ public final class CompanionBodyClient {
         return entry == null ? null : entry.villager;
     }
 
+    /**
+     * Whether this companion renders with MCA's villager look (skin, face, clothes, hair layers) instead of its
+     * player skin: always with companionAppearance mca_generated, else once its look was set with MCA's editor.
+     */
+    public static boolean useGeneratedLook(CompanionEntity e) {
+        if (!featureEnabled()) return false;
+        if (generatedAppearance()) return true;
+        CompanionBodyData edits = ClientCompanionBodies.get(e.getUUID());
+        return edits != null && edits.mcaLook();
+    }
+
     /** Whether this companion should currently use the MCA body (as opposed to the vanilla player model). */
     public static boolean useMcaBody(CompanionEntity e) {
         if (!featureEnabled()) return false;
-        if (generatedAppearance()) return true;
+        if (useGeneratedLook(e)) return true;
         Entry entry = ensure(e);
         if (entry == null || entry.gender != Gender.FEMALE) return false; // male MCA body == vanilla player body
         return !(ToiConfig.get().companionFlatWhenChestArmor && !e.getItemBySlot(EquipmentSlot.CHEST).isEmpty());
@@ -114,34 +125,12 @@ public final class CompanionBodyClient {
 
     private static Entry create(Level level, UUID id, Gender gender, int rev) {
         try {
-            VillagerEntityMCA v = (gender == Gender.FEMALE ? EntitiesMCA.FEMALE_VILLAGER : EntitiesMCA.MALE_VILLAGER).create(level);
-            if (v == null) return null;
-            // Root cause of the 0.1.2 "scaled-up child" look and missing breasts: an entity made with
-            // EntityType.create() never runs finalizeSpawn(), so AgeState stays UNASSIGNED and MCA's
-            // refreshDimensions() interpolates UNASSIGNED -> BABY with the default GrowthAmount (-maxAge),
-            // giving BABY dimensions (head 1.5x, breasts 0). setAge(0) = adult: AgeState.ADULT, dimensions ADULT.
-            v.setAge(0);
-            v.setAgeState(AgeState.ADULT);
-            v.refreshDimensions();
-            Genetics g = v.getGenetics();
-            g.setGender(gender);
-            Random r = new Random(id.getMostSignificantBits() ^ id.getLeastSignificantBits());
-            for (Genetics.GeneType type : new Genetics.GeneType[]{Genetics.SIZE, Genetics.WIDTH, Genetics.BREAST, Genetics.MELANIN,
-                    Genetics.HEMOGLOBIN, Genetics.EUMELANIN, Genetics.PHEOMELANIN, Genetics.SKIN, Genetics.FACE, Genetics.EYE_BRIGHTNESS}) {
-                g.setGene(type, r.nextFloat());
-            }
-            double breast = ToiConfig.get().companionBreastSize;
-            g.setGene(Genetics.BREAST, breast >= 0 ? (float) Math.min(1.0, breast) : DEFAULT_BREAST);
-            extraDefaultGenes.accept(g);
             CompanionBodyData edits = ClientCompanionBodies.get(id);
-            if (edits != null) {
-                edits.genes.forEach((name, value) -> {
-                    Genetics.GeneType type = GENE_TYPES.get(name);
-                    if (type == null) type = extraGeneType.apply(name);
-                    if (type != null) g.setGene(type, Math.max(0f, Math.min(1f, value)));
-                });
-            }
-            if (generatedAppearance()) {
+            VillagerEntityMCA v = dev.yucktheslime.tradeofimmersion.body.CompanionMcaData.create(level, id, gender, edits,
+                    ToiConfig.get().companionBreastSize, extraDefaultGenes, extraGeneType);
+            if (v == null) return null;
+            boolean editorLook = edits != null && edits.mca != null && !edits.mca.isEmpty();
+            if (generatedAppearance() && !editorLook) {
                 try {
                     v.randomizeHair();
                     v.randomizeClothes();
@@ -169,7 +158,8 @@ public final class CompanionBodyClient {
     public static void applyScale(CompanionEntity e, PoseStack pose) {
         if (!featureEnabled()) return;
         CompanionBodyData edits = ClientCompanionBodies.get(e.getUUID());
-        if (edits == null || !(edits.genes.containsKey("Size") || edits.genes.containsKey("Width"))) return;
+        if (edits == null || !(edits.genes.containsKey("Size") || edits.genes.containsKey("Width")
+                || edits.mca != null && !edits.mca.isEmpty())) return;
         Entry entry = ensure(e);
         if (entry == null) return;
         float w = entry.villager.getRawHorizontalScaleFactor();
@@ -179,20 +169,10 @@ public final class CompanionBodyClient {
 
     static Gender genderFor(CompanionEntity e) {
         CompanionBodyData edits = ClientCompanionBodies.get(e.getUUID());
-        if (edits != null && edits.gender != null) return parse(edits.gender, Gender.MALE); // /toi gender wins
+        if (edits != null && edits.gender != null) return dev.yucktheslime.tradeofimmersion.body.CompanionMcaData.parseGender(edits.gender, Gender.MALE); // /toi gender wins
         String g = e.getGender();
         if (g == null || g.isBlank()) g = ToiConfig.get().companionGender;
-        return parse(g, Gender.MALE);
-    }
-
-    private static Gender parse(String s, Gender def) {
-        if (s == null) return def;
-        return switch (s.trim().toLowerCase(Locale.ROOT)) {
-            case "female", "f", "woman" -> Gender.FEMALE;
-            case "male", "m", "man" -> Gender.MALE;
-            case "neutral", "n" -> Gender.NEUTRAL;
-            default -> def;
-        };
+        return dev.yucktheslime.tradeofimmersion.body.CompanionMcaData.parseGender(g, Gender.MALE);
     }
 
     public record Entry(VillagerEntityMCA villager, Gender gender, int revision) {

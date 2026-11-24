@@ -1,6 +1,7 @@
 package dev.yucktheslime.tradeofimmersion.body;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -15,9 +16,20 @@ public final class CompanionBodyData {
     /** Last known companion name (for display and tab completion only). */
     public String name;
     public final Map<String, Float> genes = new LinkedHashMap<>();
+    /**
+     * Appearance saved with MCA Reborn's villager editor, needle and thread or comb (the editor's own keys:
+     * Hair*, Clothes, Skin, colors, Traits, Personality, genes, ...), or null. See {@code compat.McaEditorBridge}.
+     */
+    public CompoundTag mca;
+    /** {@code mca}: render with the MCA villager look from {@link #mca} instead of the player skin; null = skin. */
+    public String look;
 
     public boolean isEmpty() {
-        return gender == null && genes.isEmpty();
+        return gender == null && genes.isEmpty() && (mca == null || mca.isEmpty()) && look == null;
+    }
+
+    public boolean mcaLook() {
+        return "mca".equals(look);
     }
 
     public CompoundTag toTag() {
@@ -27,6 +39,8 @@ public final class CompanionBodyData {
         CompoundTag g = new CompoundTag();
         genes.forEach(g::putFloat);
         t.put("genes", g);
+        if (mca != null && !mca.isEmpty()) t.put("mca", mca.copy());
+        if (look != null) t.putString("look", look);
         return t;
     }
 
@@ -36,6 +50,8 @@ public final class CompanionBodyData {
         if (t.contains("name")) d.name = t.getString("name");
         CompoundTag g = t.getCompound("genes");
         for (String k : g.getAllKeys()) d.genes.put(k, g.getFloat(k));
+        if (t.contains("mca", Tag.TAG_COMPOUND)) d.mca = t.getCompound("mca");
+        if (t.contains("look")) d.look = t.getString("look");
         return d;
     }
 }

@@ -28,12 +28,12 @@ public final class NpcVoiceInstance extends AbstractTickableSoundInstance {
     private final WavAudioStream stream;
     private final Sound voice;
 
-    public NpcVoiceInstance(Entity speaker, WavAudioStream stream, float volume, int range) {
+    public NpcVoiceInstance(Entity speaker, WavAudioStream stream, float volume, int range, float pitch) {
         super(net.minecraft.sounds.SoundEvent.createVariableRangeEvent(ID), SoundSource.VOICE, SoundInstance.createUnseededRandom());
         this.speaker = speaker;
         this.stream = stream;
         this.volume = Math.max(0f, Math.min(1f, volume));
-        this.pitch = 1f;
+        this.pitch = pitch > 0 ? Math.max(0.5f, Math.min(2f, pitch)) : 1f;
         this.looping = false;
         this.delay = 0;
         this.relative = false;

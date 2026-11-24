@@ -219,6 +219,22 @@ public class CompanionEntity extends PathfinderMob {
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (level().isClientSide) return InteractionResult.SUCCESS;
         boolean owner = isOwner(player);
+        ItemStack held = player.getItemInHand(hand);
+        // MCA Reborn's villager editor, needle and thread and comb work on companions (compat.McaEditorBridge).
+        String item = dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.itemId(held);
+        if (player instanceof ServerPlayer sp && hand == InteractionHand.MAIN_HAND) {
+            String which = switch (item) {
+                case dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.EDITOR -> "edit";
+                case dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.NEEDLE -> "needle";
+                case dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.COMB -> "comb";
+                default -> null;
+            };
+            if (which != null) {
+                if (which.equals("edit") && player.isShiftKeyDown() && (owner || player.hasPermissions(2))) openInventory(player);
+                else dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.open(sp, this, which);
+                return InteractionResult.CONSUME;
+            }
+        }
         if (getOwnerId().isEmpty()) {
             setOwner(player);
             say("Hello " + player.getGameProfile().getName() + ", I'll come with you.");
@@ -228,19 +244,12 @@ public class CompanionEntity extends PathfinderMob {
             openInventory(player);
             return InteractionResult.CONSUME;
         }
-        ItemStack held = player.getItemInHand(hand);
+        if (ToiConfig.get().companionMenuOnRightClick && player instanceof ServerPlayer sp) {
+            if (hand == InteractionHand.MAIN_HAND) dev.yucktheslime.tradeofimmersion.menu.CompanionMenu.open(sp, this);
+            return InteractionResult.CONSUME;
+        }
         if (!held.isEmpty() && owner) {
-            ItemStack given = held.copy();
-            ItemStack rest = inventory.addItem(given);
-            int moved = given.getCount() - rest.getCount();
-            if (moved > 0) {
-                held.shrink(moved);
-                String what = moved + "x " + given.getHoverName().getString();
-                NpcMemoryStore.get().event(getUUID(), "item_given", player.getGameProfile().getName() + " gave you " + what);
-                CompanionBrain.onEvent(this, "item_given", player.getGameProfile().getName() + " just gave you " + what + ".");
-            } else {
-                say("My pockets are full.");
-            }
+            giveFrom(player, hand);
             return InteractionResult.CONSUME;
         }
         if (owner) {
@@ -249,6 +258,26 @@ public class CompanionEntity extends PathfinderMob {
             return InteractionResult.CONSUME;
         }
         return InteractionResult.PASS;
+    }
+
+    /** Moves the item in the player's hand into this companion's inventory (the owner's gift). */
+    public void giveFrom(Player player, InteractionHand hand) {
+        ItemStack held = player.getItemInHand(hand);
+        if (held.isEmpty()) {
+            say("Hold what you want to give me.");
+            return;
+        }
+        ItemStack given = held.copy();
+        ItemStack rest = inventory.addItem(given);
+        int moved = given.getCount() - rest.getCount();
+        if (moved > 0) {
+            held.shrink(moved);
+            String what = moved + "x " + given.getHoverName().getString();
+            NpcMemoryStore.get().event(getUUID(), "item_given", player.getGameProfile().getName() + " gave you " + what);
+            CompanionBrain.onEvent(this, "item_given", player.getGameProfile().getName() + " just gave you " + what + ".");
+        } else {
+            say("My pockets are full.");
+        }
     }
 
     public void openInventory(Player player) {
