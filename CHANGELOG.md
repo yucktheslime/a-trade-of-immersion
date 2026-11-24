@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.3
+- **Voice works with the DwemerDistro launcher's PocketTTS (port 8024).** The server used to send speech to
+  `http://127.0.0.1:8086/v1/audio/speech` (the audio.cpp build), which the launcher's PocketTTS does not have
+  (HTTP 404). It now speaks its XTTS-style API the way CHIM does: `POST /tts_to_audio` with
+  `{"text", "speaker_wav", "language"}`, a WAV back, and speakers from `GET /speakers_list`.
+  - New `tts.provider` values: `auto` (new default; finds PocketTTS on `tts.url`, default
+    `http://127.0.0.1:8024`, then ports 8020 and 8086 of that host) and `xtts` (also `dwemer-pockettts`).
+  - An old `pockettts` setting on 8086 falls over to the PocketTTS it finds, once per line.
+  - A voice PocketTTS does not have falls back to `tts.voice`, then to its first speaker. New `tts.language`
+    (default `en`; blank keeps the model PocketTTS has loaded).
+  - Voice hints pick among PocketTTS's real speakers (CHIM names such as `femalenord`/`malebrute` too).
+- Dashboard **Voice** page: provider choice, a **Speaker** list from PocketTTS, language, what each voice hint
+  picks from, and a voice hint in the **Speak** test.
+- Server 0.3.2-toi. No mod code changes; the version moves with the server release.
+
 ## 0.3.2
 - **DwemerDistro launcher listing:** the server is now its own repository,
   [yucktheslime/toi-kagrenac-server](https://github.com/yucktheslime/toi-kagrenac-server), published from

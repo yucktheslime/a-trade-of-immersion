@@ -290,18 +290,30 @@ On the dashboard you can now see:
 
 ## 8. Voice (optional, off by default)
 
-1. In the DwemerDistro launcher, start **PocketTTS**.
-2. On the dashboard, open **Configuration → Voice**. Tick **TTS enabled**, keep the provider
-   `pockettts` and the URL `http://127.0.0.1:8086/v1/audio/speech`, and save.
-   - Use the **Speak** test on that page to check that you hear a voice.
+1. In the DwemerDistro launcher, start **PocketTTS** (the same one CHIM uses; it runs on port 8024).
+2. On the dashboard, open **Configuration → Voice**:
+   - Tick **Enabled**. Keep the provider **Automatic (DwemerDistro PocketTTS)** and the URL
+     `http://127.0.0.1:8024`. Automatic finds PocketTTS on port 8024 and, if it is not there, on
+     8020 or the older audio.cpp route on 8086.
+   - The page asks PocketTTS for its speakers. Pick one in **Speaker** (it fills in **Voice**),
+     choose the **Language** and press **Save text to speech**.
+   - Press **Speak** to check that you hear a voice. Try the **Voice hint** `male` or `female` to hear
+     what those NPCs get.
+   - If it says no PocketTTS answered, start PocketTTS in the launcher and press **Find speakers** again.
 3. In `config/tradeofimmersion.json`, set `"voiceEnabled": true`, then run `/npc ai reload`.
 4. In Minecraft, go to **Options → Music & Sounds** and turn up **Voice/Speech**.
 
 How the voice works:
 
 - Replies are spoken from the NPC's position, so they get quieter with distance (`voiceRange`, 24 blocks).
-- Female and male NPCs get different PocketTTS voices, and each NPC always keeps the same voice. You can
-  choose a fixed voice per NPC on the dashboard's **Profiles** page.
+- Female and male NPCs get different voices, and each NPC always keeps the same voice. The voices come
+  from PocketTTS's own speaker list: the `voice_hints` names it has, otherwise its speakers whose names
+  start with `female` or `male` (CHIM voices such as `femalenord`), otherwise the voice you picked.
+  The Voice page shows what each hint picks from. A voice PocketTTS does not have falls back to its
+  first speaker. You can choose a fixed voice per NPC on the dashboard's **Profiles** page.
+- Server 0.3.1 and older sent voice to `http://127.0.0.1:8086/v1/audio/speech` (audio.cpp), which the
+  launcher's PocketTTS on port 8024 does not answer (HTTP 404). Update the server; an old saved
+  `pockettts` setting then also falls over to port 8024 by itself.
 - `voiceVillagers` (default `true`) also voices MCA villagers' lines. `voiceVolume` is between 0 and 1.
 - On a multiplayer server, only the Minecraft server talks to Kagrenac. It fetches each spoken line and
   streams the audio to the players near the NPC. Players need nothing but the mod: no URL, no token.
