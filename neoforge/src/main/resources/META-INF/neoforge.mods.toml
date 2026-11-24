@@ -20,6 +20,10 @@ config = "tradeofimmersion.mixins.json"
 [[mixins]]
 config = "tradeofimmersion.mcabp.mixins.json"
 
+# Fix for "MCA: Cobblemon" 1.0.1 crashing on MCA 7.7.36 (gifting a Poke Ball); skipped when that mod is absent.
+[[mixins]]
+config = "tradeofimmersion.mcacobblemon.mixins.json"
+
 [[dependencies.tradeofimmersion]]
 modId = "neoforge"
 type = "required"

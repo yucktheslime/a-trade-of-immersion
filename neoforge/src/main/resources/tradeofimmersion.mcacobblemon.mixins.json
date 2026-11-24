@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.yucktheslime.tradeofimmersion.neoforge.mixin.compat",
+  "plugin": "dev.yucktheslime.tradeofimmersion.neoforge.mixin.compat.McaCobblemonMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "McaCobblemonDialogueMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

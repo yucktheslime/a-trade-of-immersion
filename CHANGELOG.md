@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.6
+- **Fix: gifting a Poké Ball to an MCA villager crashed the game** when "MCA: Cobblemon" 1.0.1 (`mca_cobblemon`)
+  is installed. That addon was built when MCA's `Personality` was an enum; MCA 7.7.36 made it a registry class, so
+  its dialogue code hit `NoSuchMethodError: Personality.values()` the first time a villager caught or sent out a
+  Pokémon (or picked a Cobblemon chat line), and the server tick crashed. A small optional mixin (only applied when
+  `mca_cobblemon` is present) replaces that lookup with the same personality mapping keyed on the personality id.
+  NeoForge only; no server changes.
+
 ## 0.3.5
 - **Companion menu on right-click** (MCA-style): Follow / Stay / Wander, Inventory, Give held item, Edit (MCA
   editor), Clothes (needle and thread), Hair (comb), Voice, and a line to talk to the companion. Shift + right-click
