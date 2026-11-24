@@ -21,15 +21,24 @@ public final class CompanionBodyData {
      * Hair*, Clothes, Skin, colors, Traits, Personality, genes, ...), or null. See {@code compat.McaEditorBridge}.
      */
     public CompoundTag mca;
-    /** {@code mca}: render with the MCA villager look from {@link #mca} instead of the player skin; null = skin. */
+    /**
+     * {@code mca}: render with the MCA villager look from {@link #mca}; {@code player}: the companion's player skin
+     * (opt-out with {@code /npc skin <npc> player}); null = the default (config companionAppearance, MCA since 0.3.7).
+     */
     public String look;
+    /** Gender the generated MCA clothes and hair were picked for (regenerated when the gender changes), or null. */
+    public String lookGender;
 
     public boolean isEmpty() {
-        return gender == null && genes.isEmpty() && (mca == null || mca.isEmpty()) && look == null;
+        return gender == null && genes.isEmpty() && (mca == null || mca.isEmpty()) && look == null && lookGender == null;
     }
 
     public boolean mcaLook() {
         return "mca".equals(look);
+    }
+
+    public boolean playerLook() {
+        return "player".equals(look);
     }
 
     public CompoundTag toTag() {
@@ -41,6 +50,7 @@ public final class CompanionBodyData {
         t.put("genes", g);
         if (mca != null && !mca.isEmpty()) t.put("mca", mca.copy());
         if (look != null) t.putString("look", look);
+        if (lookGender != null) t.putString("lookGender", lookGender);
         return t;
     }
 
@@ -52,6 +62,7 @@ public final class CompanionBodyData {
         for (String k : g.getAllKeys()) d.genes.put(k, g.getFloat(k));
         if (t.contains("mca", Tag.TAG_COMPOUND)) d.mca = t.getCompound("mca");
         if (t.contains("look")) d.look = t.getString("look");
+        if (t.contains("lookGender")) d.lookGender = t.getString("lookGender");
         return d;
     }
 }

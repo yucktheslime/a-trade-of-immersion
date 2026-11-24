@@ -27,7 +27,7 @@ public abstract class McabpGenderLayerMixin {
         if (!(entity instanceof CompanionEntity npc)) return;
         VillagerEntityMCA v = CompanionBodyClient.villagerFor(entity);
         if (v == null) return;
-        if (CompanionBodyClient.generatedAppearance()) {
+        if (CompanionBodyClient.useGeneratedLook(npc)) {
             cir.setReturnValue(DynamicSkinCache.getOrCreateStitchedSkin(v));
             return;
         }

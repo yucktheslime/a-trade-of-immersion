@@ -152,8 +152,13 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
   Set `companionMenuOnRightClick` to `false` for the old clicks (right-click toggles follow / stay or hands over the held item).
 - **MCA's villager editor, needle and thread, and comb** work on companions. Right-click with the item (or use the
   menu buttons). Name, gender, genes, personality, traits, skin, face, clothes, hair and colors are saved for the
-  companion and shown to everyone. Changing skin, clothes or hair switches it from its player skin to the MCA
-  villager look. `/npc skin <npc> player` goes back to the player skin, and `/npc skin <npc> mca` goes to the MCA look.
+  companion and shown to everyone.
+- **Companions look like MCA villagers** (since 0.3.7): MCA Reborn's villager model with its own genes, skin, face,
+  clothes and hair, picked for its gender the way MCA does for a new villager, saved in the world and the same for
+  every player. Existing companions get one the first time they load. Armor and held items render on the MCA body;
+  with MCA Body Shapes installed they also get a random body shape like villagers.
+  `/npc skin <npc> player` (or naming a skin) opts one out to a player skin, `/npc skin <npc> mca` switches back, and
+  `/npc skin <npc> random` rolls a new MCA look.
   The owner or an operator can edit (anyone with the editor item if `mcaEditorItemForEveryone` is on).
 - **Voice:** every companion and MCA villager has its own voice. Change it in the menu's **Voice** button, with
   `/npc voice ...`, or on the Kagrenac dashboard, where you can also upload voice samples one by one or as a zip
@@ -185,7 +190,7 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `/npc say <npc> <text>` | owner/op | talk from anywhere |
 | `/npc follow\|stay\|wander <npc>` | owner/op | movement mode |
 | `/npc inventory <npc>` | owner/op | open the bag |
-| `/npc skin <npc> <spec>` | owner/op | `player:<name>`, `url:<https://...png>`, `file:<name.png>` (in `config/tradeofimmersion/skins/`), `default`, `slim`, `wide` |
+| `/npc skin <npc> <spec>` | owner/op | `mca` (MCA villager look, the default), `random` (new MCA look), or a player skin: `player` / `default`, `player:<name>`, `url:<https://...png>`, `file:<name.png>` (in `config/tradeofimmersion/skins/`), `slim`, `wide` |
 | `/npc gender <npc> <male\|female\|neutral>` | owner/op | also drives the MCA body |
 | `/npc persona <npc> <text>` | owner/op | personality given to the AI |
 | `/npc memory <npc>` | owner/op | recent memories |
@@ -245,7 +250,7 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 |---|---|---|
 | `fleeHealthFraction`, `defendOwner`, `followTeleportDistance` | 0.3, true, 24 | behavior |
 | `defaultSkin`, `companionGender` | empty, `male` | defaults for new companions |
-| `companionMcaBody`, `companionAppearance` | true, `player_skin` | MCA body on; `mca_generated` gives an MCA villager look instead of a skin |
+| `companionMcaBody`, `companionAppearance` | true, `mca_generated` | MCA body on; companions use the MCA villager look (`player_skin`: new companions use a player skin instead). Server-side default; the look is saved per companion |
 
 Saved data lives in `<world>/data/tradeofimmersion/`:
 

@@ -93,9 +93,10 @@ public final class CompanionBodyClient {
      */
     public static boolean useGeneratedLook(CompanionEntity e) {
         if (!featureEnabled()) return false;
-        if (generatedAppearance()) return true;
         CompanionBodyData edits = ClientCompanionBodies.get(e.getUUID());
-        return edits != null && edits.mcaLook();
+        // The server decides per companion (synced); this client's config is only the fallback before the first sync.
+        if (edits != null && edits.look != null) return edits.mcaLook();
+        return generatedAppearance();
     }
 
     /** Whether this companion should currently use the MCA body (as opposed to the vanilla player model). */
@@ -129,15 +130,7 @@ public final class CompanionBodyClient {
             VillagerEntityMCA v = dev.yucktheslime.tradeofimmersion.body.CompanionMcaData.create(level, id, gender, edits,
                     ToiConfig.get().companionBreastSize, extraDefaultGenes, extraGeneType);
             if (v == null) return null;
-            boolean editorLook = edits != null && edits.mca != null && !edits.mca.isEmpty();
-            if (generatedAppearance() && !editorLook) {
-                try {
-                    v.randomizeHair();
-                    v.randomizeClothes();
-                } catch (Throwable t) {
-                    TradeOfImmersion.LOGGER.debug("MCA hair/clothes randomization unavailable on this client", t);
-                }
-            }
+            // Skin, clothes and hair come from the server (CompanionLooks), so every player sees the same companion.
             var dims = v.getVillagerDimensions();
             if (dims.getHead() != 1.0f || dims.getBreasts() != 1.0f) {
                 TradeOfImmersion.LOGGER.warn("[tradeofimmersion] Companion MCA data is not adult-sized (head={}, breasts={}, age={})",
@@ -157,14 +150,20 @@ public final class CompanionBodyClient {
      */
     public static void applyScale(CompanionEntity e, PoseStack pose) {
         if (!featureEnabled()) return;
+        boolean villagerLook = useGeneratedLook(e);
         CompanionBodyData edits = ClientCompanionBodies.get(e.getUUID());
-        if (edits == null || !(edits.genes.containsKey("Size") || edits.genes.containsKey("Width")
-                || edits.mca != null && !edits.mca.isEmpty())) return;
+        if (!villagerLook && (edits == null || !(edits.genes.containsKey("Size") || edits.genes.containsKey("Width")
+                || edits.mca != null && !edits.mca.isEmpty()))) return;
         Entry entry = ensure(e);
         if (entry == null) return;
+        // Like MCA's VillagerLikeEntityMCARenderer.scale: width and height from the Size/Width genes.
         float w = entry.villager.getRawHorizontalScaleFactor();
         float h = entry.villager.getRawVerticalScaleFactor();
         if (w > 0 && h > 0) pose.scale(w, h, w);
+        if (villagerLook) {
+            float bh = BodyShapesClient.heightMultiplier(e);
+            if (bh != 1.0f) pose.scale(1.0f, bh, 1.0f);
+        }
     }
 
     static Gender genderFor(CompanionEntity e) {

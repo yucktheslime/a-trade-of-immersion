@@ -5,6 +5,7 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.yucktheslime.tradeofimmersion.TradeOfImmersion;
 import dev.yucktheslime.tradeofimmersion.entity.CompanionEntity;
+import net.conczin.mca.client.model.PlayerArmorExtendedModel;
 import net.conczin.mca.client.model.PlayerEntityExtendedModel;
 import net.conczin.mca.client.model.VillagerEntityModelMCA;
 import net.conczin.mca.client.render.layer.ClothingLayer;
@@ -38,7 +39,11 @@ import java.util.List;
 import java.util.function.BiConsumer;
 
 /**
- * Player-shaped renderer for companions with MCA Reborn's body: the vanilla player geometry (wide or slim, by
+ * Since 0.3.7 companions render with MCA Reborn's villager model by default: the same model, skin, face, clothes and
+ * hair layers MCA uses for players shown as villagers, fed with the companion's MCA villager record (server-made,
+ * see {@code body.CompanionLooks}). {@code /npc skin <npc> player} opts one out to the player-skin look below.
+ *
+ * <p>Player-shaped renderer for companions with MCA Reborn's body: the vanilla player geometry (wide or slim, by
  * skin) plus MCA's breast parts, like MCA's own player renderer; or (config {@code companionAppearance:
  * mca_generated}) an MCA villager look from genes. Armor, held items, heads and elytra render like on a player.
  */
@@ -48,6 +53,7 @@ public class CompanionRenderer extends LivingEntityRenderer<CompanionEntity, Pla
 
     private final PlayerModel<CompanionEntity> wide, slim;
     private PlayerModel<CompanionEntity> mcaWide, mcaSlim, mcaGenerated;
+    private RenderLayer<CompanionEntity, PlayerModel<CompanionEntity>> mcaArmor;
     /** True while rendering a companion with the MCA villager look (gates the MCA skin/face/clothes/hair layers). */
     private boolean generatedNow;
 
@@ -64,6 +70,11 @@ public class CompanionRenderer extends LivingEntityRenderer<CompanionEntity, Pla
                 this.addLayer(new GatedLayer(this, new FaceLayer<>(this, visible(VillagerEntityModelMCA.bodyData(new CubeDeformation(0.01f))), "normal")));
                 this.addLayer(new GatedLayer(this, new ClothingLayer<>(this, visible(VillagerEntityModelMCA.bodyData(new CubeDeformation(0.0625f))), "normal")));
                 this.addLayer(new GatedLayer(this, new HairLayer<>(this, visible(VillagerEntityModelMCA.hairData(new CubeDeformation(0.125f))))));
+                // Armor shaped like MCA's on players with the villager look (MixinHumanoidArmorLayer): covers the breasts.
+                mcaArmor = new GatedLayer(this, new HumanoidArmorLayer<>(this,
+                        new PlayerArmorExtendedModel<>(LayerDefinition.create(VillagerEntityModelMCA.armorData(new CubeDeformation(0.5f)), 64, 32).bakeRoot()),
+                        new PlayerArmorExtendedModel<>(LayerDefinition.create(VillagerEntityModelMCA.armorData(new CubeDeformation(1.0f)), 64, 32).bakeRoot()),
+                        ctx.getModelManager()));
                 mcaWide = new PlayerEntityExtendedModel<>(ctx.bakeLayer(ModelLayers.PLAYER), false,
                         LayerDefinition.create(VillagerEntityModelMCA.bodyData(CubeDeformation.NONE), 64, 64).bakeRoot());
                 mcaSlim = new PlayerEntityExtendedModel<>(ctx.bakeLayer(ModelLayers.PLAYER_SLIM), true,
@@ -71,10 +82,18 @@ public class CompanionRenderer extends LivingEntityRenderer<CompanionEntity, Pla
             }
         } catch (Throwable t) {
             mcaWide = mcaSlim = mcaGenerated = null;
+            mcaArmor = null;
             TradeOfImmersion.LOGGER.warn("[tradeofimmersion] MCA companion body unavailable; using the vanilla player model", t);
         }
-        this.addLayer(new HumanoidArmorLayer<>(this, new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
-                new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)), ctx.getModelManager()));
+        HumanoidArmorLayer<CompanionEntity, PlayerModel<CompanionEntity>, HumanoidArmorModel<CompanionEntity>> playerArmor =
+                new HumanoidArmorLayer<>(this, new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
+                        new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)), ctx.getModelManager());
+        if (mcaArmor != null) {
+            this.addLayer(new GatedLayer(this, playerArmor, false));
+            this.addLayer(mcaArmor);
+        } else {
+            this.addLayer(playerArmor);
+        }
         this.addLayer(new ItemInHandLayer<>(this, ctx.getItemInHandRenderer()));
         this.addLayer(new CustomHeadLayer<>(this, ctx.getModelSet(), ctx.getItemInHandRenderer()));
         this.addLayer(new ElytraLayer<>(this, ctx.getModelSet()));
@@ -141,7 +160,8 @@ public class CompanionRenderer extends LivingEntityRenderer<CompanionEntity, Pla
 
     @Override
     protected void scale(CompanionEntity e, PoseStack pose, float tickDelta) {
-        pose.scale(0.9375f, 0.9375f, 0.9375f);
+        // Player size for the player-skin look; the MCA villager look is sized like an MCA villager (genes only).
+        if (!generatedNow) pose.scale(0.9375f, 0.9375f, 0.9375f);
         try {
             CompanionBodyClient.applyScale(e, pose);
         } catch (Throwable ignored) {
@@ -156,25 +176,44 @@ public class CompanionRenderer extends LivingEntityRenderer<CompanionEntity, Pla
 
     @Override
     protected boolean shouldShowName(CompanionEntity e) {
-        return super.shouldShowName(e) && (e.hasCustomName());
+        if (!e.hasCustomName()) return false;
+        if (super.shouldShowName(e)) return true;
+        // Like MCA's villagers (VillagerLikeEntityMCARenderer.shouldShowName): the name tag shows within MCA's
+        // nameTagDistance, not only when looked at.
+        try {
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            net.conczin.mca.Config cfg = net.conczin.mca.Config.getInstance();
+            return mc.player != null && cfg.showNameTags && !(mc.screen instanceof net.conczin.mca.client.gui.VillagerEditorScreen)
+                    && mc.player.distanceToSqr(e) < (double) cfg.nameTagDistance * cfg.nameTagDistance && !e.isInvisibleTo(mc.player);
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     /** Renders an MCA villager-look layer only for companions that currently use that look. */
     private static final class GatedLayer extends RenderLayer<CompanionEntity, PlayerModel<CompanionEntity>> {
         private final CompanionRenderer owner;
         private final RenderLayer<CompanionEntity, PlayerModel<CompanionEntity>> inner;
+        /** true: only with the MCA villager look; false: only without it. */
+        private final boolean whenVillagerLook;
+
+        @SuppressWarnings({"rawtypes"})
+        GatedLayer(CompanionRenderer owner, RenderLayer inner) {
+            this(owner, inner, true);
+        }
 
         @SuppressWarnings({"unchecked", "rawtypes"})
-        GatedLayer(CompanionRenderer owner, RenderLayer inner) {
+        GatedLayer(CompanionRenderer owner, RenderLayer inner, boolean whenVillagerLook) {
             super(owner);
             this.owner = owner;
             this.inner = inner;
+            this.whenVillagerLook = whenVillagerLook;
         }
 
         @Override
         public void render(PoseStack pose, MultiBufferSource buffers, int light, CompanionEntity e, float limbSwing, float limbSwingAmount,
                            float tickDelta, float age, float headYaw, float headPitch) {
-            if (owner.generatedNow) inner.render(pose, buffers, light, e, limbSwing, limbSwingAmount, tickDelta, age, headYaw, headPitch);
+            if (owner.generatedNow == whenVillagerLook) inner.render(pose, buffers, light, e, limbSwing, limbSwingAmount, tickDelta, age, headYaw, headPitch);
         }
     }
 }

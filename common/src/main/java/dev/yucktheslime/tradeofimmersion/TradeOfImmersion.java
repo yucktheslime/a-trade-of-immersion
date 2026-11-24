@@ -69,6 +69,7 @@ public final class TradeOfImmersion {
             ItemKnowledgeStore.get().close();
         });
         TickEvent.SERVER_POST.register(CompanionBrain::tick);
+        TickEvent.SERVER_POST.register(dev.yucktheslime.tradeofimmersion.body.CompanionLooks::flush);
         TickEvent.SERVER_POST.register(dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld::tick);
     }
 }

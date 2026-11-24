@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.7
+- **Companions use MCA Reborn's villager model by default.** Every companion, new or existing, renders like an MCA
+  villager: MCA's model with its skin, face, clothes and hair layers, its genes (size, width, skin and hair colour,
+  breasts) and traits. The server picks the look the way MCA does when a villager spawns (genes from the biome,
+  traits, a body skin, clothes and hair for the companion's gender, sometimes dyed hair), saves it in
+  `companion_bodies.json` and syncs it, so every player sees the same companion. Existing companions get a look the
+  first time they load; a look made with MCA's editor is kept (only blank clothes or hair are filled in).
+  Changing the gender (`/npc gender`) picks new clothes and hair for it.
+- Sized like MCA villagers (gene size/width, no player 0.9375 scale). Armor uses MCA's armor model (covers the
+  breasts); held items, shields and bows work as before. The name tag now shows like on MCA villagers (within MCA's
+  `nameTagDistance`, `showNameTags`), not only when you look straight at the companion.
+- **MCA Body Shapes** (optional): its sliders already shape companions (it hooks MCA's
+  `PlayerEntityExtendedModel`); companions now also get a random body shape like villagers do, and its height slider
+  is applied. Reflection only, never required.
+- `/npc skin <npc> player` (or any player skin) opts a companion out; `/npc skin <npc> mca` switches back;
+  `/npc skin <npc> random` rolls a new MCA look. `/npc spawn <name> <gender> <skin>` with a skin spawns with a player
+  skin. `companionAppearance` defaults to `mca_generated`; older configs are moved to it once
+  (`companionAppearanceDefaultsVersion`). The client no longer randomizes hair or clothes itself (that made players
+  see different companions).
+- MCA: Female Gender Physics compat textures the breasts from the per-companion look, not the client config.
+- No server (Kagrenac) changes.
+
 ## 0.3.6
 - **Fix: gifting a Poké Ball to an MCA villager crashed the game** when "MCA: Cobblemon" 1.0.1 (`mca_cobblemon`)
   is installed. That addon was built when MCA's `Personality` was an enum; MCA 7.7.36 made it a registry class, so

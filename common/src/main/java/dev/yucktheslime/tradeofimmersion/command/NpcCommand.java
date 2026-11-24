@@ -103,15 +103,25 @@ public final class NpcCommand {
         root.then(Commands.literal("skin").then(npc().then(Commands.argument("skin", StringArgumentType.greedyString()).executes(c -> {
             CompanionEntity n = owned(c);
             String s = StringArgumentType.getString(c, "skin").trim();
+            if (s.equalsIgnoreCase("random") || s.equalsIgnoreCase("reroll")) {
+                var body = dev.yucktheslime.tradeofimmersion.body.CompanionBodyStore.get().getOrCreate(n.getUUID());
+                body.mca = null;
+                body.lookGender = null;
+                body.genes.clear();
+                dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.setLook(c.getSource().getServer(), n, true);
+                dev.yucktheslime.tradeofimmersion.body.CompanionLooks.tick(n);
+                c.getSource().sendSuccess(() -> Component.literal(n.name() + " got a new random MCA villager look."), false);
+                return 1;
+            }
             if (s.equalsIgnoreCase("mca")) {
                 dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.setLook(c.getSource().getServer(), n, true);
-                c.getSource().sendSuccess(() -> Component.literal(n.name() + " now uses the MCA villager look (change it with MCA's villager editor)."), false);
+                c.getSource().sendSuccess(() -> Component.literal(n.name() + " now uses the MCA villager look (change it with MCA's villager editor, needle and thread or comb)."), false);
                 return 1;
             }
             dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.setLook(c.getSource().getServer(), n, false);
             if (s.equalsIgnoreCase("slim") || s.equalsIgnoreCase("wide")) n.setSlim(s.equalsIgnoreCase("slim"));
             else n.setSkin(s.equalsIgnoreCase("default") || s.equalsIgnoreCase("player") ? "" : s);
-            c.getSource().sendSuccess(() -> Component.literal(n.name() + " skin: " + (n.getSkin().isEmpty() ? "default" : n.getSkin()) + (n.isSlim() ? " (slim arms)" : "")), false);
+            c.getSource().sendSuccess(() -> Component.literal(n.name() + " now uses a player skin: " + (n.getSkin().isEmpty() ? "default" : n.getSkin()) + (n.isSlim() ? " (slim arms)" : "") + ". /npc skin " + n.name() + " mca switches back to the MCA villager look."), false);
             return 1;
         }))));
         root.then(Commands.literal("gender").then(npc().then(Commands.argument("gender", StringArgumentType.word())
@@ -123,6 +133,10 @@ public final class NpcCommand {
                         return 0;
                     }
                     n.setGender(g);
+                    var body = dev.yucktheslime.tradeofimmersion.body.CompanionBodyStore.get().find(n.getUUID());
+                    if (body != null && body.gender != null) body.gender = g; // the MCA editor's gender would win otherwise
+                    dev.yucktheslime.tradeofimmersion.body.CompanionLooks.tick(n); // new clothes and hair for the gender
+                    dev.yucktheslime.tradeofimmersion.body.CompanionLooks.flush(c.getSource().getServer());
                     c.getSource().sendSuccess(() -> Component.literal(n.name() + " is now " + g), false);
                     return 1;
                 }))));
@@ -209,7 +223,14 @@ public final class NpcCommand {
 
     private static int spawn(CommandContext<CommandSourceStack> c, String name, String gender, String skin) throws CommandSyntaxException {
         ServerPlayer p = c.getSource().getEntity() instanceof ServerPlayer sp ? sp : null;
-        CompanionEntity n = Companions.spawn(c.getSource().getLevel(), c.getSource().getPosition(), p, name, gender, skin);
+        boolean mcaSkin = skin != null && skin.trim().equalsIgnoreCase("mca");
+        CompanionEntity n = Companions.spawn(c.getSource().getLevel(), c.getSource().getPosition(), p, name, gender, mcaSkin ? null : skin);
+        if (skin != null && !skin.isBlank()) {
+            // A skin named at spawn means the player-skin look; "mca" (or none) keeps the default MCA villager look.
+            dev.yucktheslime.tradeofimmersion.compat.McaEditorBridge.setLook(c.getSource().getServer(), n, mcaSkin);
+        }
+        dev.yucktheslime.tradeofimmersion.body.CompanionLooks.tick(n);
+        dev.yucktheslime.tradeofimmersion.body.CompanionLooks.flush(c.getSource().getServer());
         n.say("Hello" + (p != null ? " " + p.getGameProfile().getName() : "") + "! I'm " + n.name() + ".");
         c.getSource().sendSuccess(() -> Component.literal("Spawned " + n.name() + " (" + n.getGender() + ")" + (p != null ? ", owned by " + p.getGameProfile().getName() : "")
                 + ". Talk in chat near them, shift-right-click for their inventory."), dev.yucktheslime.tradeofimmersion.config.ToiConfig.get().chatOpFeedback);

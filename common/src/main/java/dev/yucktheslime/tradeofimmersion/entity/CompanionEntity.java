@@ -293,6 +293,7 @@ public class CompanionEntity extends PathfinderMob {
     public void tick() {
         super.tick();
         if (level().isClientSide) return;
+        if (tickCount == 2 || (tickCount + getId()) % 40 == 0) dev.yucktheslime.tradeofimmersion.body.CompanionLooks.tick(this);
         if (task != null && task.tick(this)) {
             CompanionTask done = task;
             task = null;

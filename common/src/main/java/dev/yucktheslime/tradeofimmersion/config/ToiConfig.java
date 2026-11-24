@@ -192,8 +192,15 @@ public final class ToiConfig {
     // ---- client-side companion body (NeoForge only) ----
     /** Render companions with MCA Reborn's body (female shape/breasts) instead of the flat player model. */
     public boolean companionMcaBody = true;
-    /** {@code "player_skin"}: keep the companion's own skin on MCA's player-compatible body. {@code "mca_generated"}: MCA villager look (skin, face, hair, clothes generated from genes). */
-    public String companionAppearance = "player_skin";
+    /**
+     * Server default look of companions: {@code "mca_generated"} (the default since 0.3.7): MCA Reborn's villager look,
+     * with genes, skin, clothes and hair picked like MCA does for a new villager, saved per companion and synced to
+     * every player. {@code "player_skin"}: the companion's player skin on MCA's body. Per companion:
+     * {@code /npc skin <npc> player|mca|random}.
+     */
+    public String companionAppearance = "mca_generated";
+    /** Internal: 1 once companionAppearance was moved to the 0.3.7 default (mca_generated). */
+    public int companionAppearanceDefaultsVersion = 0;
     /** Fallback when a companion has no gender set: {@code "female"}, {@code "male"} or {@code "neutral"}. */
     public String companionGender = "male";
     /** Breast size 0..1 for female companions; negative = MCA gene, seeded from the companion's UUID. */
@@ -285,6 +292,15 @@ public final class ToiConfig {
             }
         }
         instance = loaded != null ? loaded : new ToiConfig();
+        if (instance.companionAppearanceDefaultsVersion < 1) {
+            // 0.3.7: companions use the MCA villager model by default, also in configs written by older versions.
+            if (!"mca_generated".equalsIgnoreCase(instance.companionAppearance)) {
+                TradeOfImmersion.LOGGER.info("[tradeofimmersion] companionAppearance {} -> mca_generated (new default; "
+                        + "/npc skin <npc> player keeps a player skin)", instance.companionAppearance);
+            }
+            instance.companionAppearance = "mca_generated";
+            instance.companionAppearanceDefaultsVersion = 1;
+        }
         LauncherPairing.reload();
         if (loaded == null && LauncherPairing.get() != null) {
             // First start after the DwemerDistro launcher installed and paired the mod: use Kagrenac right away.

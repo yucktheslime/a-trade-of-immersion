@@ -121,8 +121,10 @@ public final class McaEditorBridge {
             }
             body.mca = stored;
             if (visual) body.look = "mca";
+            if (body.look == null) body.look = dev.yucktheslime.tradeofimmersion.body.CompanionLooks.defaultLook();
             String gender = CompanionMcaData.genderName(v.getGenetics().getGender());
             body.gender = gender;
+            body.lookGender = gender; // the editor chose clothes and hair for this gender: don't re-pick them
             c.setGender(gender);
             CompanionMcaData.GENE_TYPES.forEach((name, type) -> body.genes.put(name, v.getGenetics().getGene(type)));
             if (patch.contains("CustomName") && v.getCustomName() != null && !v.getCustomName().getString().isBlank()) {
@@ -139,10 +141,10 @@ public final class McaEditorBridge {
         }
     }
 
-    /** {@code /npc skin}: back to the player skin, or {@code mca} for the MCA look. */
+    /** {@code /npc skin}: the player skin (opt-out), or {@code mca} for the MCA villager look (the default). */
     public static void setLook(net.minecraft.server.MinecraftServer server, CompanionEntity c, boolean mca) {
         CompanionBodyData body = CompanionBodyStore.get().getOrCreate(c.getUUID());
-        body.look = mca ? "mca" : null;
+        body.look = mca ? "mca" : "player";
         CompanionBodyStore.get().save();
         CompanionBodySync.broadcast(server);
     }

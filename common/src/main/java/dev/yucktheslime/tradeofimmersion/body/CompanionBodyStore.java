@@ -44,6 +44,7 @@ public final class CompanionBodyStore {
                     for (var g : o.getAsJsonObject("genes").entrySet()) d.genes.put(g.getKey(), g.getValue().getAsFloat());
                 }
                 if (o.has("look")) d.look = o.get("look").getAsString();
+                if (o.has("lookGender")) d.lookGender = o.get("lookGender").getAsString();
                 if (o.has("mca")) {
                     try {
                         d.mca = net.minecraft.nbt.TagParser.parseTag(o.get("mca").getAsString());
@@ -87,6 +88,7 @@ public final class CompanionBodyStore {
             d.genes.forEach(g::addProperty);
             o.add("genes", g);
             if (d.look != null) o.addProperty("look", d.look);
+            if (d.lookGender != null) o.addProperty("lookGender", d.lookGender);
             if (d.mca != null && !d.mca.isEmpty()) o.addProperty("mca", d.mca.toString()); // SNBT
             root.add(id.toString(), o);
         });
