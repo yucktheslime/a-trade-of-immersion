@@ -15,7 +15,16 @@
   the existing per-companion gap and the global per-minute cap. The public-chat filter can be switched
   off with `chatFilterEnabled`.
 - Unit tests for the line filter, name matching and the routing rules.
-
+- **Phase 4 AI budget.** Only NPCs within `aiProximityRange` of a player (default 64 blocks) may use
+  the AI (LLM calls and heavy AI ticking). At most `aiMaxActiveNpcs` (default 8) are active at once,
+  chosen by: the player is looking at them, a recent conversation or interaction, companion ownership,
+  then closer distance. The rest stay in the world and keep ordinary Minecraft AI; their AI turns wait
+  until a slot opens. LLM requests themselves are limited to `aiMaxConcurrentRequests` (default 2) in
+  flight, with a FIFO queue. NPC memory is saved to disk and dropped from RAM when the NPC unloads,
+  goes idle (`aiMemoryIdleSeconds`, default 120) or the LRU cache (`aiMemoryCacheSize`, default 32)
+  is full; it reloads on the next access. Other phases should call `AiBudget.isActive(entity)` before
+  an AI turn. All keys are 0 to disable that limit. `/npc ai status` shows the budget. Unit tests
+  cover the cap, priority, LLM queue and LRU, including a 2000-NPC stress case.
 
 ## 0.3.9
 - **Architectury API is bundled** (jar-in-jar) in both the NeoForge and Fabric jars, so you no longer need

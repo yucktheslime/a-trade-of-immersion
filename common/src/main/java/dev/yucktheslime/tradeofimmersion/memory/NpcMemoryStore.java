@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * Per-companion memory: what it saw (deaths, attacks, damage, items given, task results) and what was said.
@@ -34,10 +35,18 @@ public final class NpcMemoryStore {
         return INSTANCE;
     }
 
+    /** Optional hook (Phase 4 budget) fired on every cache access so the LRU can track this NPC. */
+    public static volatile Consumer<UUID> onAccess = id -> { };
+
     public synchronized void open(MinecraftServer server) {
+        open(server.getWorldPath(LevelResource.ROOT).resolve("data").resolve(TradeOfImmersion.MOD_ID).resolve("npcs"));
+    }
+
+    /** Open a directory directly (world load, or unit tests that do not boot a server). */
+    public synchronized void open(Path directory) {
         cache.clear();
         dirty.clear();
-        dir = server.getWorldPath(LevelResource.ROOT).resolve("data").resolve(TradeOfImmersion.MOD_ID).resolve("npcs");
+        dir = directory;
         try {
             Files.createDirectories(dir);
         } catch (IOException e) {
@@ -52,7 +61,41 @@ public final class NpcMemoryStore {
     }
 
     public Memory memory(UUID npc) {
-        return cache.computeIfAbsent(npc, this::load);
+        Memory m = cache.computeIfAbsent(npc, this::load);
+        onAccess.accept(npc);
+        return m;
+    }
+
+    public int cacheSize() {
+        return cache.size();
+    }
+
+    /**
+     * Persist this NPC if dirty, then drop it from the RAM cache. The next {@link #memory(UUID)}
+     * reloads it from disk. Used by the Phase 4 memory LRU when the NPC unloads or goes idle.
+     */
+    public synchronized void unload(UUID id) {
+        if (id == null) return;
+        if (dir != null && dirty.contains(id)) {
+            Memory m = cache.get(id);
+            if (m != null) {
+                try {
+                    String json;
+                    synchronized (m) {
+                        json = GSON.toJson(m);
+                    }
+                    Files.writeString(dir.resolve(id + ".json"), json, StandardCharsets.UTF_8);
+                    dirty.remove(id);
+                } catch (IOException e) {
+                    TradeOfImmersion.LOGGER.warn("Could not save memory for {} before unload", id, e);
+                    return; // keep it in RAM so a later save can retry
+                }
+            } else {
+                dirty.remove(id);
+            }
+        }
+        cache.remove(id);
+        dirty.remove(id);
     }
 
     private Memory load(UUID id) {

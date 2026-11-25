@@ -226,6 +226,11 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `aiMaxRequestsPerMinute` | 20 | global cap on AI calls |
 | `aiMinSecondsBetweenTurns` | 2 | per-companion gap; newer triggers wait, latest wins |
 | `aiFallbackToMock`, `aiFailureCooldownSeconds` | true, 60 | behavior when the backend is down |
+| `aiProximityRange` | 64 | only NPCs this close to a player use the AI; 0 = no culling |
+| `aiMaxActiveNpcs` | 8 | cap on AI-active NPCs (looked-at, recent interaction, owned companion, then closer); 0 = no cap |
+| `aiMaxConcurrentRequests` | 2 | max LLM requests in flight; extras wait in a queue; 0 = no cap |
+| `aiMemoryCacheSize`, `aiMemoryIdleSeconds` | 32, 120 | RAM cap for NPC memory (LRU, saved to disk) and idle unload; 0 = off |
+| `aiRecentInteractionSeconds` | 45 | a conversation keeps that NPC preferred for the cap this long |
 | `kagrenacBaseUrl` | `http://127.0.0.1:19000/TradeOfImmersionServer` | Kagrenac server (the launcher route; manual install: `.../custom-mods/trade-of-immersion`); any http/https URL, e.g. a tunnel to your PC for a hosted server |
 | `kagrenacToken` | empty | server token; env `TOI_KAGRENAC_TOKEN` (or `KAGRENAC_TOKEN`) overrides it; when empty, the launcher pairing file `mods/tradeofimmersion-kagrenac.json` is used; required for a remote URL |
 | `kagrenacSessionId` | empty | defaults to `mc-<world name>` |

@@ -1,6 +1,8 @@
 package dev.yucktheslime.tradeofimmersion.ai;
 
 import dev.yucktheslime.tradeofimmersion.TradeOfImmersion;
+import dev.yucktheslime.tradeofimmersion.budget.AiBudget;
+import dev.yucktheslime.tradeofimmersion.budget.LlmQueue;
 import dev.yucktheslime.tradeofimmersion.action.ActionExecutor;
 import dev.yucktheslime.tradeofimmersion.config.ToiConfig;
 import dev.yucktheslime.tradeofimmersion.entity.CompanionEntity;
@@ -131,12 +133,14 @@ public final class CompanionBrain {
         return "backend " + backend.name() + (backend instanceof KagrenacBackend k ? " [" + k.serverInfo() + "; events " + k.outbox.status() + "]" : "")
                 + ", active " + active().name() + ", ok " + ok + ", failed " + failed
                 + (cd > 0 ? ", cooling down " + cd + "s" : "") + (lastError.isBlank() ? "" : ", last error: " + lastError)
-                + ", item knowledge " + ItemKnowledgeStore.get().size();
+                + ", item knowledge " + ItemKnowledgeStore.get().size()
+                + ", " + AiBudget.status();
     }
 
     // ------------------------------------------------------------------ triggers
 
     public static void onChat(CompanionEntity c, String speaker, String text) {
+        AiBudget.noteInteraction(c.getUUID());
         NpcMemoryStore.get().chat(c.getUUID(), speaker, text);
         request(c, new Pending(speaker, text, null, 0));
     }
@@ -160,7 +164,7 @@ public final class CompanionBrain {
         // CHIM-style interruption: a new player line to a companion that is still thinking cancels the old turn
         // on the Kagrenac server (cancel.php) and is answered right away.
         if (s.inFlight && p.eventType == null && backend instanceof KagrenacBackend k && active() == k
-                && ToiConfig.get().kagrenacCancelOnInterrupt && takeSlot(now)) {
+                && ToiConfig.get().kagrenacCancelOnInterrupt && AiBudget.isActive(c) && takeSlot(now)) {
             k.cancel(KagrenacBackend.companionId(c.getUUID().toString()));
             s.gen++;
             s.inFlight = false;
@@ -169,8 +173,9 @@ public final class CompanionBrain {
             run(c, s, p);
             return;
         }
-        if (s.inFlight || now - s.lastTurn < ToiConfig.get().aiMinSecondsBetweenTurns * 1000 || !takeSlot(now)) {
-            // keep the most important pending trigger: chat beats events
+        if (s.inFlight || now - s.lastTurn < ToiConfig.get().aiMinSecondsBetweenTurns * 1000
+                || !AiBudget.isActive(c) || !takeSlot(now)) {
+            // keep the most important pending trigger: chat beats events (also waits for an AI budget slot)
             if (s.pending == null || p.eventType == null || s.pending.eventType != null) s.pending = p;
             return;
         }
@@ -204,7 +209,7 @@ public final class CompanionBrain {
         UUID id = c.getUUID();
         CompletableFuture<AiReply> f;
         try {
-            f = b.companionTurn(req);
+            f = LlmQueue.get().submit(() -> b.companionTurn(req));
         } catch (Exception e) {
             f = CompletableFuture.failedFuture(e);
         }
@@ -235,7 +240,7 @@ public final class CompanionBrain {
                     // async fallback (short line or OpenAI-compatible): its reply is applied when it arrives
                     int g2 = ++s.gen;
                     s.inFlight = true;
-                    fb.companionTurn(req).whenComplete((r2, e2) -> srv.execute(() -> {
+                    LlmQueue.get().submit(() -> fb.companionTurn(req)).whenComplete((r2, e2) -> srv.execute(() -> {
                         if (s.gen != g2) return;
                         s.inFlight = false;
                         CompanionEntity c2 = find(srv, id);
@@ -321,6 +326,7 @@ public final class CompanionBrain {
             s.gen++;
             k.cancel(KagrenacBackend.companionId(c.getUUID().toString()));
         }
+        AiBudget.onNpcUnloaded(c.getUUID());
     }
 
     /** /npc ai cancel: drop what the companion is thinking about. */
@@ -357,6 +363,7 @@ public final class CompanionBrain {
                 s.pending = null;
                 continue;
             }
+            if (!AiBudget.isActive(c)) continue; // stay queued until proximity/cap allows
             if (!takeSlot(now)) return;
             Pending p = s.pending;
             s.pending = null;

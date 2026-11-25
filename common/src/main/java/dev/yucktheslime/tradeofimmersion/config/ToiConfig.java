@@ -53,6 +53,37 @@ public final class ToiConfig {
     /** Minimum seconds between two AI turns of the same companion. */
     public double aiMinSecondsBetweenTurns = 2.0;
 
+    // ---- Phase 4 performance (AI budget) ----
+    /**
+     * Only NPCs within this many blocks of a player may use the AI (LLM calls and heavy AI ticking).
+     * {@code 0} = no proximity culling. Ordinary Minecraft AI (walk, follow, fight) is not affected.
+     */
+    public int aiProximityRange = 64;
+    /**
+     * Max NPCs that may be AI-active at once. Priority: the player is looking at them, they were
+     * recently interacted with, they are an owned companion, then closer distance. The rest wait
+     * in the queue. {@code 0} = no cap.
+     */
+    public int aiMaxActiveNpcs = 8;
+    /**
+     * Max LLM / AI-backend requests in flight at once. Extra requests wait in a FIFO queue.
+     * Separate from {@code aiMaxRequestsPerMinute}. {@code 0} = no concurrency cap.
+     */
+    public int aiMaxConcurrentRequests = 2;
+    /**
+     * Max NPC memories (companion event/chat logs, and villager conversation logs, each) kept in RAM.
+     * Least-recently used ones are saved to disk and evicted; they reload on the next access.
+     * {@code 0} = no size cap (legacy: only evict by idle timeout, if any).
+     */
+    public int aiMemoryCacheSize = 32;
+    /**
+     * Unload an NPC's memory from RAM after this many seconds without access, when it is also not
+     * AI-active. {@code 0} = only evict by {@code aiMemoryCacheSize}.
+     */
+    public int aiMemoryIdleSeconds = 120;
+    /** A conversation or interaction keeps that NPC preferred for the active cap for this many seconds. */
+    public int aiRecentInteractionSeconds = 45;
+
     // ---- Kagrenac (aiBackend "kagrenac", see docs/KAGRENAC_SETUP.md) ----
     /**
      * Kagrenac server base URL: the kagrenac-server/ folder of this repo installed in DwemerDistro. Any http(s) URL

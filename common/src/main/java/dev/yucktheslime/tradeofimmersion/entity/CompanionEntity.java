@@ -1,6 +1,7 @@
 package dev.yucktheslime.tradeofimmersion.entity;
 
 import dev.yucktheslime.tradeofimmersion.ai.CompanionBrain;
+import dev.yucktheslime.tradeofimmersion.budget.AiBudget;
 import dev.yucktheslime.tradeofimmersion.config.ToiConfig;
 import dev.yucktheslime.tradeofimmersion.entity.goal.CompanionGoals;
 import dev.yucktheslime.tradeofimmersion.memory.NpcMemoryStore;
@@ -428,6 +429,15 @@ public class CompanionEntity extends PathfinderMob {
             CompanionBrain.onCompanionGone(this);
         }
         super.die(source);
+    }
+
+    @Override
+    public void remove(Entity.RemovalReason reason) {
+        if (!level().isClientSide) {
+            if (reason != null && reason.shouldDestroy()) CompanionBrain.onCompanionGone(this);
+            else AiBudget.onNpcUnloaded(getUUID());
+        }
+        super.remove(reason);
     }
 
     @Override

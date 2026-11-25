@@ -1,6 +1,8 @@
 package dev.yucktheslime.tradeofimmersion.villager;
 
 import dev.yucktheslime.tradeofimmersion.TradeOfImmersion;
+import dev.yucktheslime.tradeofimmersion.budget.AiBudget;
+import dev.yucktheslime.tradeofimmersion.budget.LlmQueue;
 import dev.yucktheslime.tradeofimmersion.ai.CompanionBrain;
 import dev.yucktheslime.tradeofimmersion.ai.VillagerRequest;
 import dev.yucktheslime.tradeofimmersion.config.ToiConfig;
@@ -40,6 +42,12 @@ public final class VillagerTalk {
             NpcMemoryStore.get().event(c.getUUID(), "talk", vName + " can't talk right now (asleep or busy)");
             return;
         }
+        AiBudget.noteInteraction(v.getUUID());
+        AiBudget.noteInteraction(c.getUUID());
+        if (!AiBudget.isActive(v)) {
+            NpcMemoryStore.get().event(c.getUUID(), "talk", vName + " didn't answer (AI budget: not active)");
+            return;
+        }
         if (!CompanionBrain.trySlot()) {
             NpcMemoryStore.get().event(c.getUUID(), "talk", vName + " didn't answer (AI rate limit)");
             return;
@@ -59,7 +67,7 @@ public final class VillagerTalk {
         ctx.put("speaker_owner", c.getOwnerName());
         MinecraftServer srv = c.getServer();
         UUID cid = c.getUUID(), vid = v.getUUID();
-        CompanionBrain.active().villagerLine(new VillagerRequest(vid.toString(), vName, c.name(), system, user, message, ctx))
+        LlmQueue.get().submit(() -> CompanionBrain.active().villagerLine(new VillagerRequest(vid.toString(), vName, c.name(), system, user, message, ctx)))
                 .whenComplete((line, err) -> srv.execute(() -> {
                     CompanionEntity comp = CompanionBrain.find(srv, cid);
                     VillagerEntityMCA vill = findVillager(srv, vid);
@@ -100,6 +108,11 @@ public final class VillagerTalk {
             dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.info(p, vName + " can't talk right now.");
             return;
         }
+        AiBudget.noteInteraction(v.getUUID());
+        if (!AiBudget.isActive(v)) {
+            dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.info(p, vName + " didn't answer (too many NPCs thinking nearby, try again in a moment).");
+            return;
+        }
         if (!CompanionBrain.trySlot()) {
             dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.info(p, vName + " didn't answer (AI rate limit, try again in a moment).");
             return;
@@ -120,7 +133,7 @@ public final class VillagerTalk {
         ctx.put("speaker_kind", "player");
         MinecraftServer srv = p.getServer();
         UUID vid = v.getUUID(), pid = p.getUUID();
-        CompanionBrain.active().villagerLine(new VillagerRequest(vid.toString(), vName, who, system, user, message, ctx))
+        LlmQueue.get().submit(() -> CompanionBrain.active().villagerLine(new VillagerRequest(vid.toString(), vName, who, system, user, message, ctx)))
                 .whenComplete((line, err) -> srv.execute(() -> {
                     VillagerEntityMCA vill = findVillager(srv, vid);
                     if (vill == null) return;

@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * Per-villager conversation log persisted as JSON in the world save:
@@ -43,10 +44,18 @@ public final class ConversationMemoryStore {
         return INSTANCE;
     }
 
+    /** Optional hook (Phase 4 budget) fired on every cache access so the LRU can track this villager. */
+    public static volatile Consumer<UUID> onAccess = id -> { };
+
     public synchronized void open(MinecraftServer server) {
+        open(server.getWorldPath(LevelResource.ROOT).resolve("data").resolve(TradeOfImmersion.MOD_ID).resolve("villagers"));
+    }
+
+    /** Open a directory directly (world load, or unit tests that do not boot a server). */
+    public synchronized void open(Path directory) {
         logs.clear();
         dirty.clear();
-        dir = server.getWorldPath(LevelResource.ROOT).resolve("data").resolve(TradeOfImmersion.MOD_ID).resolve("villagers");
+        dir = directory;
         try {
             Files.createDirectories(dir);
         } catch (IOException e) {
@@ -61,7 +70,44 @@ public final class ConversationMemoryStore {
     }
 
     public VillagerLog log(UUID villager) {
-        return logs.computeIfAbsent(villager, this::load);
+        VillagerLog log = logs.computeIfAbsent(villager, this::load);
+        onAccess.accept(villager);
+        return log;
+    }
+
+    public int cacheSize() {
+        return logs.size();
+    }
+
+    /**
+     * Persist this villager log if dirty, then drop it from the RAM cache. The next {@link #log(UUID)}
+     * reloads it from disk. Used by the Phase 4 memory LRU when the villager unloads or goes idle.
+     */
+    public synchronized void unload(UUID id) {
+        if (id == null) return;
+        if (dir != null && dirty.contains(id)) {
+            VillagerLog log = logs.get(id);
+            if (log != null) {
+                Path file = dir.resolve(id + ".json");
+                Path tmp = dir.resolve(id + ".json.tmp");
+                try {
+                    synchronized (log) {
+                        try (Writer w = Files.newBufferedWriter(tmp, StandardCharsets.UTF_8)) {
+                            GSON.toJson(log, w);
+                        }
+                    }
+                    Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                    dirty.remove(id);
+                } catch (IOException e) {
+                    TradeOfImmersion.LOGGER.warn("Could not save conversation log {} before unload", file, e);
+                    return;
+                }
+            } else {
+                dirty.remove(id);
+            }
+        }
+        logs.remove(id);
+        dirty.remove(id);
     }
 
     public int entryCount(UUID villager) {

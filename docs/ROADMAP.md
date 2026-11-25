@@ -64,11 +64,15 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 ## Phase 4 - scale: proximity culling and the "social battery" cap
 
 - Proximity culling: companions far from every player go dormant (no AI turns, active memory unloaded
-  to disk) and wake up when a player is back in range.
+  to disk) and wake up when a player is back in range. **partial** — `AiBudget` (`aiProximityRange`,
+  default 64) gates LLM calls and heavy AI ticks; ordinary walk/follow/fight still runs. Memory is
+  persisted and evicted on unload, idle (`aiMemoryIdleSeconds`) or LRU cap (`aiMemoryCacheSize`).
+- Active AI NPC cap: at most `aiMaxActiveNpcs` (default 8) are AI-active, by look / recent interaction
+  / ownership / distance; others wait. LLM requests are also capped by `aiMaxConcurrentRequests`
+  (default 2) with a FIFO queue. Other phases should call `AiBudget.isActive(entity)`.
 - Off-screen lives: while dormant, a cheap summary step advances their story (where they went, what
-  happened) so they tell a consistent story on reunion.
-- Active AI NPC cap, disguised in-world as a language barrier / social battery: NPCs beyond the cap use
-  canned/vanilla MCA dialogue until a slot opens (e.g. an AI NPC dies, is dismissed or goes dormant).
+  happened) so they tell a consistent story on reunion. **planned** (not in this slice).
+- Language-barrier flavour (canned/vanilla MCA lines for NPCs past the cap) **planned**.
 
 ## Phase 5 - jobs and modpack roles
 

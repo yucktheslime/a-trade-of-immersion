@@ -4,6 +4,7 @@ import dev.architectury.event.events.common.CommandRegistrationEvent;
 import dev.architectury.event.events.common.LifecycleEvent;
 import dev.architectury.event.events.common.TickEvent;
 import dev.yucktheslime.tradeofimmersion.ai.CompanionBrain;
+import dev.yucktheslime.tradeofimmersion.budget.AiBudget;
 import dev.yucktheslime.tradeofimmersion.body.CompanionBodyStore;
 import dev.yucktheslime.tradeofimmersion.body.CompanionBodySync;
 import dev.yucktheslime.tradeofimmersion.command.CompanionBodyCommand;
@@ -54,6 +55,7 @@ public final class TradeOfImmersion {
             NpcMemoryStore.get().open(server);
             ItemKnowledgeStore.get().open(server);
             CompanionBrain.start(server);
+            AiBudget.start(server);
         });
         LifecycleEvent.SERVER_LEVEL_SAVE.register(level -> {
             ConversationMemoryStore.get().saveDirty();
@@ -61,6 +63,7 @@ public final class TradeOfImmersion {
             ItemKnowledgeStore.get().save();
         });
         LifecycleEvent.SERVER_STOPPING.register(server -> {
+            AiBudget.stop();
             CompanionBrain.stop();
             CompanionBodyStore.get().save();
             CompanionBodyStore.get().unload();
@@ -69,6 +72,7 @@ public final class TradeOfImmersion {
             NpcMemoryStore.get().close();
             ItemKnowledgeStore.get().close();
         });
+        TickEvent.SERVER_POST.register(AiBudget::tick);
         TickEvent.SERVER_POST.register(CompanionBrain::tick);
         TickEvent.SERVER_POST.register(dev.yucktheslime.tradeofimmersion.body.CompanionLooks::flush);
         TickEvent.SERVER_POST.register(dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld::tick);
