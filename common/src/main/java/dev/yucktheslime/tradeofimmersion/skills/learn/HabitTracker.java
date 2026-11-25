@@ -3,6 +3,7 @@ package dev.yucktheslime.tradeofimmersion.skills.learn;
 import dev.architectury.event.EventResult;
 import dev.architectury.event.events.common.BlockEvent;
 import dev.architectury.event.events.common.InteractionEvent;
+import dev.yucktheslime.tradeofimmersion.budget.AiBudget;
 import dev.yucktheslime.tradeofimmersion.entity.CompanionEntity;
 import dev.yucktheslime.tradeofimmersion.memory.NpcMemoryStore;
 import dev.yucktheslime.tradeofimmersion.skills.SkillTask;
@@ -109,10 +110,12 @@ public final class HabitTracker {
         if (!activity.equals("farm") && !activity.equals("chop") && !activity.equals("mine")) return;
         long now = System.currentTimeMillis();
         for (CompanionEntity c : companionsOf(p, 24)) {
+            if (!AiBudget.isActive(c)) continue;
             if (c.getTask() != null || c.isPassenger() || c.getTarget() != null || !"follow".equals(c.getMode())) continue;
             Long last = LAST_HELP.get(c.getUUID());
             if (last != null && now - last < SkillsConfig.get().habitHelpCooldownSeconds * 1000L) continue;
             LAST_HELP.put(c.getUUID(), now);
+            AiBudget.noteInteraction(c.getUUID());
             switch (activity) {
                 case "farm" -> {
                     c.setTask(new FarmTask(pos, 8));

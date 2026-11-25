@@ -44,6 +44,7 @@ The Fabric build (`a-trade-of-immersion-fabric-0.3.9.jar`) compiles from the sam
 The config file is `config/tradeofimmersion.json`. It is created on first launch.
 Phase 2 (marriage, pregnancy, relationships) has its own file, `config/tradeofimmersion-life.json`,
 also created on first launch; `/npc life reload` rereads it.
+Phase 3 job, mount, travel and item-learning switches live in `config/tradeofimmersion-skills.json` (also created on first launch).
 
 After editing it, run `/npc ai reload`, then `/npc ai status` to check it.
 
@@ -201,6 +202,12 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 - **They learn items:**
   - `inspect_item` reads the registry id, the mod name, the tooltip, food/armor/attribute stats and tags;
   - the AI can save a one-line note per item, shared by all companions in that world.
+- **Jobs, mounts and learned items** (Phase 3): ask a companion to farm, chop trees, mine exposed
+  blocks, dig a tunnel or stairs, bridge a gap, or fetch an item. On a long trip they look for an
+  allowed horse, boat or vehicle first. They will not ride a dragon a player owns. They can learn
+  how an item is used from its tooltip, and (if you press a mod key while holding it) from that
+  key's packet. Settings: `config/tradeofimmersion-skills.json`. Commands: `/npcskills habits`,
+  `/npcskills items`, `/npcskills mounts <npc>`, `/npcskills reload`.
 
 ### Commands
 

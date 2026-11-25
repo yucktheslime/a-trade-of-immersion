@@ -6,6 +6,7 @@ import dev.architectury.event.events.common.TickEvent;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
 import dev.yucktheslime.tradeofimmersion.TradeOfImmersion;
+import dev.yucktheslime.tradeofimmersion.budget.AiBudget;
 import dev.yucktheslime.tradeofimmersion.entity.CompanionEntity;
 import dev.yucktheslime.tradeofimmersion.entity.CompanionTask;
 import dev.yucktheslime.tradeofimmersion.entity.Companions;
@@ -66,6 +67,7 @@ public final class Skills {
 
     /** The player rode off while the companion follows on foot: get on an allowed, steerable ride close by. */
     private static void followByMount(CompanionEntity c) {
+        if (!AiBudget.isActive(c)) return;
         if (!"follow".equals(c.getMode()) || c.getTask() != null || c.isPassenger() || c.getTarget() != null) return;
         Player owner = c.getOwner();
         if (owner == null || !owner.isPassenger() || owner.distanceToSqr(c) < 10 * 10) return;

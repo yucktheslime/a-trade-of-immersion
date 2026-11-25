@@ -30,7 +30,7 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 | Feature | Status | Notes |
 |---|---|---|
 | Kagrenac protocol v1 client: turns with game context, events, results, cancel, decision | done | tested against the bundled server with its mock model |
-| Bundled server `kagrenac-server/` (13 actions, game events, bios, voice hints) for DwemerDistro | partial | tested on php -S + PostgreSQL; the real DwemerDistro install is not tested yet |
+| Bundled server `kagrenac-server/` (Minecraft actions, game events, bios, voice hints) for DwemerDistro | partial | tested on php -S + PostgreSQL; the real DwemerDistro install is not tested yet |
 | Companion + MCA villager bios (personality, profession, family) on the dashboard | done | game bios never overwrite operator edits |
 | Positional NPC voice through speak.php / PocketTTS | done | off by default; tested with pocket-tts behind a wrapper, captured to a file |
 | Speech input (push-to-talk) | done (0.3.8) | hold B: the microphone goes through the Minecraft server to Kagrenac `listen.php` (Parakeet); the transcript is said to the NPC, or put in the talk field (`sttAutoSend: false`) |
@@ -77,11 +77,26 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 
 ## Phase 5 - jobs and modpack roles
 
-- Mining missions: "get me 20 iron", ore finding, tunnelling, returning with the haul.
-- Camp management: campfires, cooking, sleeping, gear repair and upkeep, restocking food.
+- Farming, chopping natural trees, fetching items (ground or a nearby chest), and bringing them to
+  the player. **partial** — `farm` / `chop` / `fetch` jobs; auto-help when the player does this often
+  (`habitLearning`, gated by `AiBudget.isActive`).
+- Mining and tunnelling: mine exposed blocks of one kind; dig a straight 1x2 tunnel or staircase, or
+  bridge a gap with blocks from the bag, stopping at lava, chests, machines or unbreakable blocks.
+  **partial** — buried ore is not dug out; vanilla pathfinding still cannot plan a mine or build
+  complex bridges. `miningEnabled` / `bridgingEnabled` switches.
+- Mount and vehicle control with ownership rules (never a player-owned dragon; wild dragons and
+  player-owned tamed animals / bikes / cars may be ridden). Long trips (default 150 blocks) look for
+  an allowed ride first. **partial** — vanilla mounts, boats and minecarts steer; vehicle-mod adapters
+  are generic stubs until a real per-mod adapter is registered.
+- Item learning from tooltips ("right-click to…", "press V to…") and keybind observation/replay.
+  **partial** — right-click via the fake player works generally; key replay depends on the other mod
+  accepting a fake player as sender. Failed ways are marked unusable.
+- Settings live in `config/tradeofimmersion-skills.json`. `/npcskills` inspects habits, learned
+  items and mount decisions.
+- Camp management: campfires, cooking, sleeping, gear repair and upkeep, restocking food. **planned**
 - Tech/magic modpack roles: run automation (feed machines, empty outputs), tend mystical crops,
-  use modded tools and staffs with learned item knowledge.
-- Building from simple plans; farming; trading with villagers on the owner's behalf.
+  use modded tools and staffs with learned item knowledge. **planned** (use_ability is the hook).
+- Building from plans; trading with villagers on the owner's behalf. **planned**
 
 ## Phase 6 - adaptive learning
 
@@ -95,4 +110,4 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 - Fabric builds and compiles but is less tested than NeoForge.
 - Items moved through the inventory screen are not reported as "gifts" (only right-click hand-overs are).
 - A plain upstream Kagrenac template only offers its three built-in actions; the bundled `kagrenac-server/`
-  offers all 13.
+  offers the full Minecraft action catalog (jobs, travel and item abilities included).

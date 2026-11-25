@@ -25,6 +25,23 @@
   is full; it reloads on the next access. Other phases should call `AiBudget.isActive(entity)` before
   an AI turn. All keys are 0 to disable that limit. `/npc ai status` shows the budget. Unit tests
   cover the cap, priority, LLM queue and LRU, including a 2000-NPC stress case.
+- **Phase 3 jobs, mounts and item learning.** Companions can farm (harvest and replant), chop natural
+  trees, mine exposed blocks they can walk to, dig a straight 1x2 tunnel or staircase, bridge a gap
+  with blocks from the bag, and fetch items from the ground or a nearby chest. Vanilla pathfinding
+  still cannot plan a mine; buried ore is not dug out automatically, and tunnels are straight lines
+  that stop at lava, chests or unbreakable blocks. Mounts: they steer horses, donkeys, camels, pigs
+  and striders (with the stick in the bag), boats and minecarts, and never ride a player-owned
+  dragon (wild/unowned dragons are allowed; player-owned tamed animals, bikes and cars may be
+  ridden). Trips longer than `longTravelDistance` (default 150 blocks) look nearby for an allowed
+  ride first. Item tooltips are parsed into use plans ("right-click to…", "press V to…"); right-click
+  goes through the fake player, and keybinds are learned by watching a real player's key press and
+  replaying the serverbound packet (or a per-mod adapter). Ways that keep failing are marked
+  unusable. Habit learning watches what you farm/chop/mine and idle following companions may join in.
+  Automatic habit help and auto-mounting when you ride off are gated by `AiBudget.isActive`. All of
+  it is toggleable in `config/tradeofimmersion-skills.json`. `/npcskills habits|items|mounts|reload`.
+  Vehicle mods (bikes/cars/planes) have generic stub adapters; a real per-mod adapter can replace
+  them. Unit tests cover mount rules, the distance trigger, tooltip parsing, action planning, key
+  packet correlation and habit scores.
 
 - **Phase 2 MCA life, pregnancy, marriage and relationships.** MCA fires no life-event hooks, so a
   snapshot watcher plus mixins detect marriages, engagements, births, pregnancies, deaths, gifts,
