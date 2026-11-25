@@ -39,7 +39,7 @@ public final class Life {
 
     /**
      * Ask a companion to react in character (pregnancy, birth, jealousy, a proposal...). Notes the
-     * interaction for Phase 4's active-NPC cap and skips the LLM turn when that companion is culled.
+     * interaction for Phase 4's active-NPC cap CompanionBrain queues the turn if that companion is still culled.
      */
     public static void react(dev.yucktheslime.tradeofimmersion.entity.CompanionEntity c, String type, String text) {
         if (c == null || text == null || text.isBlank()) return;
