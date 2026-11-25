@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.yucktheslime.tradeofimmersion.TradeOfImmersion;
 import dev.yucktheslime.tradeofimmersion.action.ActionExecutor;
+import dev.yucktheslime.tradeofimmersion.skills.SkillActions;
 import dev.yucktheslime.tradeofimmersion.config.ToiConfig;
 
 import java.net.URI;
@@ -39,10 +40,12 @@ import java.util.regex.Pattern;
 public final class KagrenacBackend implements AiBackend {
     /** Protocol action names, in the order they are offered. */
     public static final List<String> ALL_ACTIONS = List.of("follow_player", "hold_position", "attack_hostile", "attack_target",
-            "go_to", "mount", "dismount", "equip", "use_item", "give_item", "pick_up", "inspect_item", "talk_to_villager");
+            "go_to", "mount", "dismount", "equip", "use_item", "give_item", "pick_up", "inspect_item", "talk_to_villager",
+            "farm", "chop", "mine", "dig", "fetch", "travel", "learn_item", "use_ability", "stop_job");
     static final Set<String> TEMPLATE_ACTIONS = Set.of("follow_player", "hold_position", "attack_hostile");
     /** Actions whose single argument is required. */
-    static final Set<String> NEEDS_VALUE = Set.of("attack_target", "go_to", "equip", "use_item", "give_item", "inspect_item", "talk_to_villager");
+    static final Set<String> NEEDS_VALUE = Set.of("attack_target", "go_to", "equip", "use_item", "give_item", "inspect_item", "talk_to_villager",
+            "mine", "fetch", "travel", "learn_item", "use_ability");
     static final Set<String> TEMPLATE_EVENTS = Set.of("location_entered", "item_given", "combat_started", "combat_ended");
     static final Set<String> MINECRAFT_EVENTS = Set.of("entity_died", "npc_hurt", "player_hurt", "villager_spoke", "relationship",
             "action_result", "world_note");
@@ -328,6 +331,8 @@ public final class KagrenacBackend implements AiBackend {
 
     /** One protocol action as the ActionExecutor JSON it runs. */
     static JsonObject map(String n, String value, String reply, String player) {
+        JsonObject skill = SkillActions.fromKagrenac(n, value);
+        if (skill != null) return skill;
         JsonObject m = new JsonObject();
         switch (n) {
             case "follow_player" -> m.addProperty("action", "follow");

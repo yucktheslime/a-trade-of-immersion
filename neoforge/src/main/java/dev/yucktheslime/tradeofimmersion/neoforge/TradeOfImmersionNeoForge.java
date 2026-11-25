@@ -2,6 +2,7 @@ package dev.yucktheslime.tradeofimmersion.neoforge;
 
 import dev.yucktheslime.tradeofimmersion.TradeOfImmersion;
 import dev.yucktheslime.tradeofimmersion.platform.FakePlayers;
+import dev.yucktheslime.tradeofimmersion.skills.item.PayloadBridge;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
@@ -14,6 +15,7 @@ import net.neoforged.neoforge.common.util.FakePlayerFactory;
 public final class TradeOfImmersionNeoForge {
     public TradeOfImmersionNeoForge() {
         FakePlayers.setProvider(FakePlayerFactory::get);
+        PayloadBridge.Holder.set(new NeoForgePayloadBridge());
         TradeOfImmersion.init();
         addLegacyAliases();
         if (FMLEnvironment.dist == Dist.CLIENT) NeoForgeClient.init();

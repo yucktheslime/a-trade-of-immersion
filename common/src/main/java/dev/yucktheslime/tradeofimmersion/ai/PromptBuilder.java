@@ -2,6 +2,7 @@ package dev.yucktheslime.tradeofimmersion.ai;
 
 import dev.yucktheslime.tradeofimmersion.action.Targets;
 import dev.yucktheslime.tradeofimmersion.config.ToiConfig;
+import dev.yucktheslime.tradeofimmersion.skills.SkillActions;
 import dev.yucktheslime.tradeofimmersion.entity.CompanionEntity;
 import dev.yucktheslime.tradeofimmersion.entity.CompanionTask;
 import dev.yucktheslime.tradeofimmersion.item.ItemInspector;
@@ -55,6 +56,7 @@ public final class PromptBuilder {
                 + "You can act in the world. Reply with ONLY one JSON object, no other text:\n"
                 + "{\"say\":\"what you say out loud (may be empty)\",\"actions\":[...],\"learn\":[{\"item\":\"<item id>\",\"notes\":\"<one sentence on what it is for>\"}]}\n"
                 + ACTIONS
+                + SkillActions.PROMPT
                 + "Only use items you actually carry, and targets that appear in the context. Use \"learn\" after inspecting an item to remember what it does. "
                 + "If an action failed, say so honestly and maybe try something else.";
     }
@@ -159,6 +161,8 @@ public final class PromptBuilder {
             u.append("== Recent conversation ==\n");
             for (var l : chat) u.append(l.who()).append(": ").append(l.text()).append('\n');
         }
+        String skills = SkillActions.context(c);
+        if (!skills.isBlank()) u.append(skills);
         u.append("== Now ==\n");
         if (eventType == null) u.append(speaker).append(" says to you: ").append(trigger);
         else if (speaker != null && speaker.startsWith("villager:")) u.append(trigger);

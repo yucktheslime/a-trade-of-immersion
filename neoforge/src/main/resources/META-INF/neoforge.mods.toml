@@ -20,6 +20,10 @@ config = "tradeofimmersion.mixins.json"
 [[mixins]]
 config = "tradeofimmersion.life.mixins.json"
 
+# Phase 3: record serverbound custom payloads for key-press learning.
+[[mixins]]
+config = "tradeofimmersion.skills.mixins.json"
+
 # Optional client compat with "MCA: Female Gender Physics" (mcabp); a mixin plugin skips it when that mod is absent.
 [[mixins]]
 config = "tradeofimmersion.mcabp.mixins.json"

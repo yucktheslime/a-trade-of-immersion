@@ -326,6 +326,7 @@ public class CompanionEntity extends PathfinderMob {
     public void steerVehicleTo(Vec3 dest, double speed) {
         Entity v = getVehicle();
         if (v == null) return;
+        if (dev.yucktheslime.tradeofimmersion.skills.mount.VehicleAdapters.steer(this, v, dest, speed)) return;
         double dx = dest.x - v.getX(), dz = dest.z - v.getZ();
         double dist = Math.sqrt(dx * dx + dz * dz);
         if (v instanceof Boat boat) {
@@ -349,6 +350,11 @@ public class CompanionEntity extends PathfinderMob {
 
     public void stopVehicle() {
         Entity v = getVehicle();
+        if (v == null) return;
+        var adapter = dev.yucktheslime.tradeofimmersion.skills.mount.VehicleAdapters.find(v);
+        if (adapter != null) {
+            try { adapter.stop(this, v); } catch (Throwable ignored) {}
+        }
         if (v instanceof Boat boat) boat.setInput(false, false, false, false);
         else if (v instanceof Mob m && tickCount % 20 == 0) m.getNavigation().stop();
     }

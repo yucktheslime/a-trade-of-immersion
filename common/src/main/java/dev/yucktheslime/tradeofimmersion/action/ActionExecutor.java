@@ -3,6 +3,10 @@ package dev.yucktheslime.tradeofimmersion.action;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.yucktheslime.tradeofimmersion.entity.CompanionEntity;
+import dev.yucktheslime.tradeofimmersion.skills.SkillActions;
+import dev.yucktheslime.tradeofimmersion.skills.SkillsConfig;
+import dev.yucktheslime.tradeofimmersion.skills.item.ItemLearner;
+import dev.yucktheslime.tradeofimmersion.skills.item.ItemSkillRunner;
 import dev.yucktheslime.tradeofimmersion.entity.CompanionTask;
 import dev.yucktheslime.tradeofimmersion.item.ItemInspector;
 import dev.yucktheslime.tradeofimmersion.memory.ItemKnowledgeStore;
@@ -31,8 +35,13 @@ import java.util.Set;
  * {@link #MAX_ACTIONS} per reply; each name once. Returns one result line per action (fed back to the AI).
  */
 public final class ActionExecutor {
-    public static final Set<String> ALLOWED = Set.of("follow", "stay", "goto", "mount", "dismount", "attack", "equip", "use_item",
-            "give_item", "pick_up", "inspect_item", "talk_to_villager");
+    public static final Set<String> ALLOWED;
+    static {
+        Set<String> names = new LinkedHashSet<>(List.of("follow", "stay", "goto", "mount", "dismount", "attack", "equip", "use_item",
+                "give_item", "pick_up", "inspect_item", "talk_to_villager"));
+        names.addAll(SkillActions.NAMES);
+        ALLOWED = Set.copyOf(names);
+    }
     public static final int MAX_ACTIONS = 4;
     private static volatile Set<String> extraAllowed = Set.of();
 
@@ -87,6 +96,8 @@ public final class ActionExecutor {
     }
 
     private static Result runOne(CompanionEntity c, String name, JsonObject a) {
+        Result skill = SkillActions.run(c, name, a);
+        if (skill != null) return skill;
         switch (name) {
             case "follow" -> {
                 c.setTask(null);
@@ -177,6 +188,10 @@ public final class ActionExecutor {
                     e = Targets.find(c, t, 6, x -> x != c);
                     if (e == null) return fail(name, "no '" + t + "' within reach");
                 }
+                if (SkillsConfig.get().itemLearning) {
+                    ItemSkillRunner.Outcome o = ItemSkillRunner.use(c, first(a, "how", "mode"), e, pos);
+                    return new Result(name, o.ok(), o.text());
+                }
                 return ok(name, ItemUse.use(c, e, pos));
             }
             case "give_item" -> {
@@ -213,7 +228,9 @@ public final class ActionExecutor {
                 else if (c.getOwner() != null && (item.isBlank() || item.contains("hand") || matches(c.getOwner().getMainHandItem(), item))) stack = c.getOwner().getMainHandItem();
                 if (stack.isEmpty()) return fail(name, "no '" + item + "' to look at");
                 ItemKnowledgeStore.Knowledge k = ItemInspector.inspect(stack, c.level());
-                return ok(name, k.facts);
+                String facts = k.facts;
+                if (SkillsConfig.get().itemLearning) facts = facts + " | " + ItemLearner.learn(c, stack);
+                return ok(name, facts);
             }
             case "talk_to_villager" -> {
                 String who = first(a, "name", "target", "villager");

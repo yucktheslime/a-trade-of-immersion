@@ -21,6 +21,9 @@ public final class MockBackend implements AiBackend {
     private static final Pattern EQUIP = Pattern.compile("\\b(?:equip|wear|hold|wield|put on)\\s+(?:the\\s+|your\\s+)?([a-z0-9_ ]+)");
     private static final Pattern USE = Pattern.compile("\\buse\\s+(?:the\\s+|your\\s+)?([a-z0-9_ ]+?)(?:\\s+on\\s+(?:the\\s+)?([a-z0-9_ ]+))?$");
     private static final Pattern INSPECT = Pattern.compile("\\b(?:inspect|look at|what is|what's|examine)\\s+(?:the\\s+|this\\s+|that\\s+|your\\s+)?([a-z0-9_ ]*)");
+    private static final Pattern MINE = Pattern.compile("\\b(?:mine|dig up|dig out)\\s+(?:some\\s+|the\\s+)?([a-z0-9_ ]+)");
+    private static final Pattern FETCH = Pattern.compile("\\b(?:fetch|bring me|get me|bring)\\s+(?:some\\s+|the\\s+|my\\s+)?([a-z0-9_ ]+)");
+    private static final Pattern TRAVEL = Pattern.compile("\\b(?:go to|head to|walk to|travel to)\\s+(?:the\\s+|that\\s+)?([a-z0-9_ \\-]+)");
     private static final Pattern TALK = Pattern.compile("\\b(?:talk to|speak to|say hi to|greet|ask)\\s+([a-z]+)(?:\\s+(?:about|that)\\s+(.+))?");
 
     @Override
@@ -60,6 +63,15 @@ public final class MockBackend implements AiBackend {
             return AiReply.text("");
         }
         Matcher m;
+        if (t.matches(".*\\b(stop (the )?(job|farming|chopping|mining|digging)|cancel (the )?job)\\b.*")) return new AiReply("Okay, I'll stop.", List.of(act("stop_job")), List.of());
+        if (t.matches(".*\\b(farm|harvest|reap|tend the (crops|fields))\\b.*")) return new AiReply("I'll harvest the crops.", List.of(act("farm")), List.of());
+        if (t.matches(".*\\b(chop|cut (down )?trees|woodcut)\\b.*")) return new AiReply("I'll chop some trees.", List.of(act("chop")), List.of());
+        if ((m = MINE.matcher(t)).find()) return new AiReply("I'll mine some.", List.of(act("mine", "block", m.group(1).trim())), List.of());
+        if (t.matches(".*\\b(dig a tunnel|tunnel)\\b.*")) return new AiReply("I'll dig a tunnel.", List.of(act("dig", "mode", "tunnel")), List.of());
+        if (t.matches(".*\\b(stairs down|dig down)\\b.*")) return new AiReply("I'll dig stairs down.", List.of(act("dig", "mode", "stairs_down")), List.of());
+        if (t.matches(".*\\b(bridge (that|the|this)? ?gap|build a bridge)\\b.*")) return new AiReply("I'll bridge that.", List.of(act("dig", "mode", "bridge")), List.of());
+        if ((m = FETCH.matcher(t)).find()) return new AiReply("I'll fetch that.", List.of(act("fetch", "item", m.group(1).trim())), List.of());
+        if ((m = TRAVEL.matcher(t)).find()) return new AiReply("On my way.", List.of(act("travel", "target", m.group(1).trim())), List.of());
         if (t.matches(".*\\b(get off|dismount|get out|hop off)\\b.*")) return new AiReply("Okay, getting off.", List.of(act("dismount")), List.of());
         if ((m = MOUNT.matcher(t)).find()) return new AiReply("Hop on? Sure!", List.of(act("mount", "target", m.group(1).trim())), List.of());
         if (t.matches(".*\\b(stop fighting|stand down|cease)\\b.*")) return new AiReply("Okay, stopping.", List.of(act("attack", "target", "none")), List.of());

@@ -107,11 +107,13 @@ public final class ToiConfig {
     /**
      * Actions this game may run for Kagrenac (the client-side allowlist; the server has its own allowed_actions).
      * Names: follow_player, hold_position, attack_hostile, attack_target, go_to, mount, dismount, equip, use_item,
-     * give_item, pick_up, inspect_item, talk_to_villager. Remove a name to forbid it.
+     * give_item, pick_up, inspect_item, talk_to_villager, farm, chop, mine, dig, fetch, travel, learn_item,
+     * use_ability, stop_job. Remove a name to forbid it.
      */
     public java.util.List<String> kagrenacAllowedActions = new java.util.ArrayList<>(java.util.List.of(
             "follow_player", "hold_position", "attack_hostile", "attack_target", "go_to", "mount", "dismount", "equip",
-            "use_item", "give_item", "pick_up", "inspect_item", "talk_to_villager"));
+            "use_item", "give_item", "pick_up", "inspect_item", "talk_to_villager",
+            "farm", "chop", "mine", "dig", "fetch", "travel", "learn_item", "use_ability", "stop_job"));
     /** Send world events (deaths, damage, gifts, villager talk, relationships) to the Kagrenac event log so NPCs know what happened. */
     public boolean kagrenacLogEvents = true;
     /** Push companion and MCA villager bios (name, personality, profession, family) to the Kagrenac dashboard. */

@@ -23,7 +23,8 @@
   },
   "mixins": [
     "tradeofimmersion.mixins.json",
-    "tradeofimmersion.life.mixins.json"
+    "tradeofimmersion.life.mixins.json",
+    "tradeofimmersion.skills.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.17.2",
