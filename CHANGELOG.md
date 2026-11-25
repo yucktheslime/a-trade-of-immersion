@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (2026-11-25): Phases 1-4: chat filter, MCA life/marriage/pregnancy, jobs/mounts/item learning, AI budget
 - **Chat filter / routing.** Public chat only starts an AI turn when a player addresses an NPC: by name
   (whole word, accent-insensitive, nicknames count), a group vocative at the start of the line
   (`everyone`, `everybody`, `guys`, `team`, `all of you`), looking at them (`chatLookDegrees` /
