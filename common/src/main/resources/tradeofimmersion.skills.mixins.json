@@ -1,0 +1,12 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.yucktheslime.tradeofimmersion.skills.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ServerboundCustomPayloadSpyMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}
