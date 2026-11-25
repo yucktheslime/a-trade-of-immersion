@@ -42,6 +42,8 @@ The Fabric build (`a-trade-of-immersion-fabric-0.3.9.jar`) compiles from the sam
 ## Setting up the AI
 
 The config file is `config/tradeofimmersion.json`. It is created on first launch.
+Phase 2 (marriage, pregnancy, relationships) has its own file, `config/tradeofimmersion-life.json`,
+also created on first launch; `/npc life reload` rereads it.
 
 After editing it, run `/npc ai reload`, then `/npc ai status` to check it.
 
@@ -188,6 +190,14 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 - **They remember:**
   - nearby deaths, who attacked whom, damage they took, gifts, what was said, and how their own actions turned out;
   - `/npc memory <npc>` shows the most recent memories.
+  - **Marriage and family (Phase 2).** AI companions can date, get engaged and marry players, each
+    other and MCA villagers (MCA's bouquet, engagement ring, wedding ring and divorce papers work on
+    them; `/npc romance` does the same). Close relatives can't pair. Affection, jealousy and neglect
+    change over time and can lead to a proposal, a break-up or a divorce. Procreating starts a
+    pregnancy that goes through phases (default about nine in-game days) before the baby item
+    arrives; the parent gets a Pregnant effect, a slowly growing belly and configurable side effects.
+    Settings live in `config/tradeofimmersion-life.json` (every feature has a switch); `/npc life
+    reload` rereads it. `/npc kin`, `/npc romance status` and `/npc pregnancy status` inspect it.
 - **They learn items:**
   - `inspect_item` reads the registry id, the mod name, the tooltip, food/armor/attribute stats and tags;
   - the AI can save a one-line note per item, shared by all companions in that world.
@@ -211,6 +221,15 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `/npc ai preset <kagrenac\|openrouter\|ollama\|mock>` | op | switch the AI backend and save the config |
 | `/npc ai cancel <npc>` | owner/op | cancel the companion's pending reply (Kagrenac: `cancel.php`) |
 | `/npc ai bios` | op | push companion and villager bios to the Kagrenac dashboard now |
+| `/npc romance status [who]` | all | family, partner, affection and jealousy |
+| `/npc romance date\|engage\|marry\|accept\|breakup <npc>` | player | courtship with an AI companion (MCA rings and a bouquet also work) |
+| `/npc romance procreate <npc>` | player | start a pregnancy (must be married and close) |
+| `/npc romance pair <a> <b> dating\|engaged\|married\|single` | op | set a companion pair's stage |
+| `/npc romance affection <a> <b> <value>` | op | set affection (-100 to 100) |
+| `/npc kin <a> <b>` | all | are these two close relatives? |
+| `/npc pregnancy status [who]` | all | pregnancy phase and due time |
+| `/npc pregnancy list` / `start` / `advance` / `end` | op | list or debug pregnancies |
+| `/npc life reload` | op | reload `config/tradeofimmersion-life.json` |
 | `/toi gender\|body <npc> ...` | op | MCA body traits (size, width, breast, skin genes, ...); the mcabp traits too when installed |
 
 ## Config (main keys)
@@ -344,6 +363,9 @@ Tested on NeoForge 21.1.267, MCA 7.7.36 and MCA: Female Gender Physics, using th
 Not tested in-game with a live LLM: real Ollama/OpenRouter output depends on the model. JSON parsing is lenient, falls back to plain speech, and is covered by the mock path. Kagrenac is implemented from PROTOCOL.md v1, but it was not tested against a running server.
 
 ## Known limitations
+- Phase 2 marriage, pregnancy, the growing belly, MCA rings on companions, autonomous courtship and
+  family-tree checks with real MCA trees need testing in a real game (and in multiplayer). The
+  kinship, relationship-math and pregnancy-phase logic is unit tested.
 
 - Mojang skin lookups can be rate-limited. The companion shows a default skin until the lookup works. URL and file skins must be 64x64.
 - Minecarts and modded seats are ride-only; companions do not drive them.

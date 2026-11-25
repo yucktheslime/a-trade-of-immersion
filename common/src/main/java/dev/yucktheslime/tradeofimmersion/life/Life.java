@@ -44,7 +44,8 @@ public final class Life {
     public static void react(dev.yucktheslime.tradeofimmersion.entity.CompanionEntity c, String type, String text) {
         if (c == null || text == null || text.isBlank()) return;
         try {
-            dev.yucktheslime.tradeofimmersion.ai.CompanionBrain.onEvent(c, type, text);
+            dev.yucktheslime.tradeofimmersion.budget.AiBudget.noteInteraction(c.getUUID());
+            dev.yucktheslime.tradeofimmersion.ai.CompanionBrain.onEvent(c, type, text); // queued if the cap still culls them
         } catch (Throwable t) {
             warnOnce("react", t);
         }

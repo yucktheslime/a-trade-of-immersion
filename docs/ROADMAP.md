@@ -37,16 +37,17 @@ Status legend: **done** = in the current release and tested in-game, **partial**
 | Dedicated NPC dialogue box | done (0.3.8) | companion and MCA villager lines out of the main chat; talk field (V), scroll-back (H), Talk button in MCA's screen |
 | Real-model tuning (OpenRouter Gemma prompts for the 13 actions) | planned | needs play-testing with a key |
 
-## Phase 2 - MCA relationships and family (next)
+## Phase 2 - MCA relationships and family
 
-- Hook MCA Reborn relationship/family events (courting, engagement, marriage, births, divorce, deaths of
-  family) and log them as milestones in companion and villager memory, fed to the AI.
-- Companions form relationships with MCA villagers and each other: hearts, gifts, dates; they can
-  marry and have kids with other NPCs autonomously (through MCA's own marriage/procreation systems).
-- Expanded MCA-style interaction UI for companions (talk, gift, ask, relationship view) instead of
-  plain chat commands.
-- Dedicated NPC chat box UI (MCA-style dialogue window) so conversations don't clutter the main chat.
-- Smarter chat filtering on top of the phase 1 filter (per-player opt-out, "is this addressed to me" model check).
+| Feature | Status | Notes |
+|---|---|---|
+| MCA life hooks and memory (marriage, engagement, birth, pregnancy, death, gifts, mood, hearts) | partial | MCA fires no events, so a snapshot watcher (villagers near players) plus mixins (`BabyItem`, `Pregnancy`, `giveGift`) detect changes; they go into NPC memory and prompts. Needs in-game testing. |
+| Pregnancy with phases instead of an instant baby item | partial | Hooks MCA's procreate path; default 3 phases of 3 in-game days; baby item (or MCA child spawn) at birth; Pregnant effect, growing belly, side effects, miscarriage toggle. Config: `config/tradeofimmersion-life.json`. Unit-tested state machine. Needs in-game testing. |
+| Companion marriage in all four directions, reusing MCA's family tree | partial | Bouquet / rings / divorce papers on companions; `/npc romance`; dating → engaged → married (`courtshipStages`). MCA already handles player-villager. Needs in-game testing. |
+| Dynamic relationships (affection, jealousy, drift) | partial | Drives proposals, break-ups, divorce and dialogue. Unit-tested math. Autonomous NPC courtship is in; a dedicated relationship UI is still planned. |
+| Family-tree restriction (siblings, parents, grandparents, aunts/uncles, cousins) | done (logic) | Reuses MCA's tree, extended to companions and cousins; `kinBlockDepth` (default 2). Unit tested. Ring-path still needs in-game testing. |
+| Dedicated NPC chat box; smarter chat filter | done | Shipped in 0.3.8 and Phase 1 (`chatfilter`), not this slice. |
+| Expanded MCA-style interaction UI for companions | planned | Commands and MCA rings work; no extra relationship screen yet. |
 
 ## Phase 3 - growing up: aging and best friends
 

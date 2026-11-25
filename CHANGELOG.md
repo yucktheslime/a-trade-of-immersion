@@ -26,6 +26,23 @@
   an AI turn. All keys are 0 to disable that limit. `/npc ai status` shows the budget. Unit tests
   cover the cap, priority, LLM queue and LRU, including a 2000-NPC stress case.
 
+- **Phase 2 MCA life, pregnancy, marriage and relationships.** MCA fires no life-event hooks, so a
+  snapshot watcher plus mixins detect marriages, engagements, births, pregnancies, deaths, gifts,
+  mood and heart changes on nearby villagers; those become NPC memory and prompt context (and a
+  Kagrenac `relationship` / `world_note` log). AI companions join MCA's family tree, so they can
+  date, get engaged and marry in all four directions (companion-player, companion-companion,
+  companion-villager, villager-companion), reusing MCA's marriage records. MCA's bouquet, engagement
+  ring, wedding ring and divorce papers work on companions; `/npc romance ...` covers the rest.
+  Affection, jealousy (flirting or gifting others) and drift from neglect drive proposals, break-ups
+  and divorce. Close relatives can't pair (siblings, parents/children, grandparents, aunts/uncles,
+  first cousins by default; `kinBlockDepth` is configurable). Pregnancy starts from MCA's normal
+  procreate step (and companion procreation) but goes through phases (default 3 in-game days each)
+  instead of handing over the baby item immediately; the item (or MCA's spawned child, for
+  villager-villager gestation) arrives at birth. A persistent Pregnant effect, growing belly on the
+  MCA/player model, slowness/hunger/nausea/mood swings, and a miscarriage toggle are all
+  configurable in `config/tradeofimmersion-life.json`. Unit tests cover the kinship check,
+  relationship math and the pregnancy state machine.
+
 ## 0.3.9
 - **Architectury API is bundled** (jar-in-jar) in both the NeoForge and Fabric jars, so you no longer need
   to install Architectury separately. MCA Reborn is the only required content mod. If you already have
