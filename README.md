@@ -265,7 +265,14 @@ written to the log the first time you press push-to-talk.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `chatHearingRadius`, `ownerChatRadius` | 16, 10 | who hears chat |
+| `chatHearingRadius`, `ownerChatRadius` | 16, 10 | who hears chat; `ownerChatRadius` is only used for unaddressed owner chat when `ownerChatWithoutAddress` is on |
+| `chatFilterEnabled` | true | public chat only starts an AI turn when a player addresses an NPC (name, group vocative, look, recent conversation, or the dialogue box). Off: public chat never starts a turn |
+| `ownerChatWithoutAddress` | false | on: an owned companion also answers the owner's nearby chat with no name or look (the old behaviour). Off: nearby chat with other players does not start a turn |
+| `chatContinueSeconds` | 60 | after an AI turn, the same player can keep talking to that NPC in public chat without repeating the name, within hearing range. 0 = off |
+| `aiVillagerPublicChat` | true | public chat can start an AI turn with an MCA villager addressed by name or look. The dialogue box always can |
+| `aiSkipVillagersWhenMcaChatAi` | true | if MCA Reborn's own villager ChatAI is on, leave public-chat villager lines to MCA so both AIs do not answer. Dialogue-box talk still uses this mod |
+| `aiNpcChatCooldownSeconds` | 2.0 | extra per-NPC cooldown for chat and dialogue-box turns (on top of `aiMinSecondsBetweenTurns` and the global per-minute cap) |
+| `chatLookDegrees`, `chatLookRange` | 10, 12 | how close the crosshair must be, and how far, for a look to count as addressing an NPC |
 | `npcChatRadius`, `npcChatOwnerRadius` | 24, 64 | who sees NPC lines: nearby players, and the owner from further away |
 | `chatShowAiErrors`, `chatCompanionDeathNotice`, `chatOpFeedback`, `statusForEveryone` | false, true, false, false | error lines in chat, owner-only companion death notice, command echo to ops, `/npc ai status` for non-ops |
 | `eventAwarenessRadius`, `reactToEvents` | 32, true | which deaths and attacks companions notice and react to |

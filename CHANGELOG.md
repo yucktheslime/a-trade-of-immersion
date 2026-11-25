@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+- **Chat filter / routing.** Public chat only starts an AI turn when a player addresses an NPC: by name
+  (whole word, accent-insensitive, nicknames count), a group vocative at the start of the line
+  (`everyone`, `everybody`, `guys`, `team`, `all of you`), looking at them (`chatLookDegrees` /
+  `chatLookRange`), a recent conversation with that NPC (`chatContinueSeconds`), or the dialogue box.
+  Nearby companions still overhear the line as memory. The old "owned companion answers every nearby
+  line" behaviour is off by default (`ownerChatWithoutAddress`).
+- Public chat can also address MCA villagers by name or look (`aiVillagerPublicChat`). If MCA Reborn's
+  own villager ChatAI is on (`enableVillagerChatAI`), a startup warning is logged and those public-chat
+  lines are left to MCA (`aiSkipVillagersWhenMcaChatAi`) so both AIs do not answer the same line.
+  Dialogue-box talk still uses this mod's AI. MCA's interaction-screen dialogues are unchanged.
+- Per-NPC cooldown for chat and dialogue-box turns (`aiNpcChatCooldownSeconds`, default 2s), on top of
+  the existing per-companion gap and the global per-minute cap. The public-chat filter can be switched
+  off with `chatFilterEnabled`.
+- Unit tests for the line filter, name matching and the routing rules.
+
+
 ## 0.3.9
 - **Architectury API is bundled** (jar-in-jar) in both the NeoForge and Fabric jars, so you no longer need
   to install Architectury separately. MCA Reborn is the only required content mod. If you already have

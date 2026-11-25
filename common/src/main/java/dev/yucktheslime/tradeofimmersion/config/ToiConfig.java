@@ -196,8 +196,44 @@ public final class ToiConfig {
     // ---- companions ----
     /** Players within this many blocks of a companion are heard by it. */
     public double chatHearingRadius = 16.0;
-    /** A companion answers chat that mentions its name; its owner's chat is also answered without the name when the owner is this close. */
+    /** A companion answers chat that mentions its name; its owner's chat is also answered without the name when the owner is this close and {@link #ownerChatWithoutAddress} is on. */
     public double ownerChatRadius = 10.0;
+
+    // ---- chat filter / routing (Phase 1) ----
+    /**
+     * Public chat is run through the address filter so the AI only answers when a player addresses an NPC
+     * (by name, a group vocative, looking at them, a recent conversation, or the dialogue box). Off: public
+     * chat never starts an AI turn; the dialogue box and world events still can.
+     */
+    public boolean chatFilterEnabled = true;
+    /**
+     * An owned companion answers the owner's public chat with no name or look, when the owner is within
+     * {@link #ownerChatRadius}. Off (the default): the companion only answers when addressed, so nearby
+     * chat with other players does not start a turn.
+     */
+    public boolean ownerChatWithoutAddress = false;
+    /**
+     * After an AI turn, the same player can keep talking to that NPC in public chat without repeating
+     * the name, for this many seconds, within {@link #chatHearingRadius}. 0 = off.
+     */
+    public int chatContinueSeconds = 60;
+    /** Public chat can start an AI turn with an MCA villager (when addressed by name or look). The dialogue box always can. */
+    public boolean aiVillagerPublicChat = true;
+    /**
+     * When MCA Reborn's own villager ChatAI is on ({@code enableVillagerChatAI}), skip our AI for public-chat
+     * lines to villagers so the two do not both answer. Dialogue-box talk still uses our AI.
+     */
+    public boolean aiSkipVillagersWhenMcaChatAi = true;
+    /**
+     * Extra seconds an NPC will not start another AI turn from chat or the dialogue box (on top of
+     * {@link #aiMinSecondsBetweenTurns} and the global per-minute cap). 0 = only those other limits.
+     */
+    public double aiNpcChatCooldownSeconds = 2.0;
+    /** Degrees off the crosshair that still count as looking at an NPC. */
+    public double chatLookDegrees = 10.0;
+    /** Max distance (blocks) for a look to count as addressing an NPC. */
+    public double chatLookRange = 12.0;
+
     /** Blocks within which deaths/attacks are remembered by a companion. */
     public double eventAwarenessRadius = 32.0;
     /** Let companions react (with an AI turn) to important events: owner hurt/died, companion hurt by a player, item given. */

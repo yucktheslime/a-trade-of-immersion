@@ -5,13 +5,12 @@ import dev.architectury.networking.NetworkManager;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
 import dev.yucktheslime.tradeofimmersion.TradeOfImmersion;
-import dev.yucktheslime.tradeofimmersion.ai.CompanionBrain;
+import dev.yucktheslime.tradeofimmersion.chatfilter.ChatFilterHooks;
 import dev.yucktheslime.tradeofimmersion.config.ToiConfig;
 import dev.yucktheslime.tradeofimmersion.entity.CompanionEntity;
 import dev.yucktheslime.tradeofimmersion.memory.NpcMemoryStore;
 import dev.yucktheslime.tradeofimmersion.stt.SttRelay;
 import dev.yucktheslime.tradeofimmersion.util.McaVillagerUtil;
-import dev.yucktheslime.tradeofimmersion.villager.VillagerTalk;
 import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -144,14 +143,11 @@ public final class DialogueNet {
         String who = p.getGameProfile().getName();
         String target = e instanceof VillagerEntityMCA v ? McaVillagerUtil.name(v) : e.getName().getString();
         echo(p, e, who, target, text);
-        if (e instanceof CompanionEntity c) {
-            CompanionBrain.onChat(c, who, text);
-        } else if (e instanceof VillagerEntityMCA v) {
-            VillagerTalk.playerSpeaks(p, v, text);
-        } else {
+        if (!(e instanceof CompanionEntity) && !(e instanceof VillagerEntityMCA)) {
             info(p, target + " can't talk.");
             return;
         }
+        ChatFilterHooks.handleDialogueTalk(p, e, text);
         // other companions close by overhear it, like normal chat
         for (CompanionEntity c : p.level().getEntitiesOfClass(CompanionEntity.class, p.getBoundingBox().inflate(cfg.chatHearingRadius), c -> c != e && c.isAlive())) {
             NpcMemoryStore.get().event(c.getUUID(), "heard", who + " said to " + target + ": " + text);
