@@ -25,7 +25,11 @@ configurations {
 dependencies {
     modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+    // Nest Architectury API (Loom include / Fabric nested jar). Do not nest
+    // Fabric API: MCA Reborn and Architectury both require it, and nearly every
+    // Fabric player already has a copy — bundling it would clash with that.
     modImplementation "dev.architectury:architectury-fabric:${rootProject.architectury_api_version}"
+    include "dev.architectury:architectury-fabric:${rootProject.architectury_api_version}"
 
     modImplementation "maven.modrinth:minecraft-comes-alive-reborn:${rootProject.mca_fabric_version}"
 

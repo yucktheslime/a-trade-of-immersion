@@ -29,14 +29,15 @@ The AI is **your choice and can be free**:
 | Mod | Version | Link |
 |---|---|---|
 | NeoForge | 21.1.267 or newer 21.1.x | https://neoforged.net/ |
-| Architectury API | 13.0.8 or newer | https://modrinth.com/mod/architectury-api |
 | MCA Reborn | 7.7.36+1.21.1 | https://modrinth.com/mod/minecraft-comes-alive-reborn/version/S2Ln2tIn |
 | *(optional)* MCA: Female Gender Physics | 0.1.8 | https://www.curseforge.com/minecraft/mc-mods/mca-female-gender-physics |
-| A Trade of Immersion | `a-trade-of-immersion-neoforge-0.3.0.jar` | GitHub Actions artifact `a-trade-of-immersion-neoforge-1.21.1` |
+| A Trade of Immersion | `a-trade-of-immersion-neoforge-0.3.9.jar` | GitHub Actions artifact `a-trade-of-immersion-neoforge-1.21.1` |
+
+MCA Reborn is the only other mod you have to install. Architectury API 13.0.8 is bundled inside this jar (LGPL-3.0), so you do not need a separate Architectury download. If you already have Architectury API 13.0.8 or newer in `mods/`, that is fine: the loader uses that copy and ignores the bundled one.
 
 Use the plain jar, not `-dev-shadow` or `-sources`.
 
-The Fabric build (`a-trade-of-immersion-fabric-0.3.0.jar`, which needs Fabric API and the Fabric MCA build) compiles from the same code, but it is less tested.
+The Fabric build (`a-trade-of-immersion-fabric-0.3.9.jar`) compiles from the same code, but it is less tested. On Fabric you still need [Fabric API](https://modrinth.com/mod/fabric-api) and the Fabric MCA build. Architectury API is bundled there too; Fabric API is not, because MCA Reborn and Architectury both require it and nearly every Fabric player already has it.
 
 ## Setting up the AI
 
@@ -370,3 +371,5 @@ Add `-PnoMcabp` to run without the optional addon in dev.
 ## License
 
 LGPL-3.0-or-later
+
+This mod bundles [Architectury API](https://github.com/architectury/architectury-api) 13.0.8, also licensed under LGPL-3.0. The bundled copy is a separate nested jar, so you can replace it by installing a compatible Architectury API jar yourself. Source: https://github.com/architectury/architectury-api

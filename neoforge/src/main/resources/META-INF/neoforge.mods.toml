@@ -38,6 +38,8 @@ versionRange = "[1.21.1,1.22)"
 ordering = "NONE"
 side = "BOTH"
 
+# Architectury API is nested in this jar (Jar-in-Jar). Players do not need a
+# separate install. A standalone Architectury API 13.0.8 or newer is also fine.
 [[dependencies.tradeofimmersion]]
 modId = "architectury"
 type = "required"

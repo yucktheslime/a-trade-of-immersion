@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.9
+- **Architectury API is bundled** (jar-in-jar) in both the NeoForge and Fabric jars, so you no longer need
+  to install Architectury separately. MCA Reborn is the only required content mod. If you already have
+  Architectury API 13.0.8 or newer in `mods/`, the loader uses that copy. Architectury API 13.0.8 is
+  LGPL-3.0; the bundled copy can be replaced by installing it yourself. Source:
+  https://github.com/architectury/architectury-api
+- Fabric still requires Fabric API (a standard Fabric dependency; MCA Reborn and Architectury both need it).
+  It is not bundled, to avoid clashing with the copy you already have.
+
 ## 0.3.8
 - **NPC dialogue box.** Companion and MCA villager lines (including MCA's own villager lines) show in a box on the
   screen instead of the main chat: an MCA-style dark panel with a gold frame, the speaker's name on a tab, names in
