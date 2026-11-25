@@ -1,0 +1,19 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.yucktheslime.tradeofimmersion.life.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BabyItemMixin",
+    "CompanionBrainMixin",
+    "CompanionEntityMixin",
+    "GiftMixin",
+    "PregnancyMixin",
+    "PromptBuilderMixin",
+    "VillagerProfileMixin",
+    "VillagerTalkMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

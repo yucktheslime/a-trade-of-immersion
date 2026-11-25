@@ -16,6 +16,10 @@ AI companions for MCA Reborn: a player-like NPC with a real inventory that uses 
 [[mixins]]
 config = "tradeofimmersion.mixins.json"
 
+# Phase 2 "MCA life": pregnancy phases, gifts, companion romance (MCA and own-class hooks).
+[[mixins]]
+config = "tradeofimmersion.life.mixins.json"
+
 # Optional client compat with "MCA: Female Gender Physics" (mcabp); a mixin plugin skips it when that mod is absent.
 [[mixins]]
 config = "tradeofimmersion.mcabp.mixins.json"

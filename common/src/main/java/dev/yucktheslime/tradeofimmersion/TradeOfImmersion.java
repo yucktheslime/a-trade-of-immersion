@@ -44,6 +44,7 @@ public final class TradeOfImmersion {
         dev.yucktheslime.tradeofimmersion.menu.CompanionMenu.init();
         dev.yucktheslime.tradeofimmersion.dialogue.DialogueNet.init();
         WorldEvents.init();
+        dev.yucktheslime.tradeofimmersion.life.Life.init(); // Phase 2: MCA life, pregnancy, marriage, relationships
         CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
             CompanionBodyCommand.register(dispatcher);
             NpcCommand.register(dispatcher);

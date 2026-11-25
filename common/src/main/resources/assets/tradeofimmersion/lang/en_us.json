@@ -5,5 +5,6 @@
   "key.categories.tradeofimmersion": "A Trade of Immersion",
   "key.tradeofimmersion.talk": "Talk to NPC (type)",
   "key.tradeofimmersion.push_to_talk": "Push to talk to NPC (hold)",
-  "key.tradeofimmersion.dialogue_history": "NPC dialogue history"
+  "key.tradeofimmersion.dialogue_history": "NPC dialogue history",
+  "effect.tradeofimmersion.pregnant": "Pregnant"
 }
