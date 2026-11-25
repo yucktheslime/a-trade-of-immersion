@@ -191,7 +191,7 @@ public final class Romance {
                 LifeEvents.remember(w.getUUID(), "jealousy", "You saw " + LifeMca.name(actor) + " " + what + " " + LifeMca.name(rival)
                         + " and felt " + RelationshipMath.jealousyWords(b.jealousy) + ".");
                 if (w instanceof CompanionEntity c && b.jealousy >= 45) {
-                    dev.yucktheslime.tradeofimmersion.ai.CompanionBrain.onEvent(c, "jealousy",
+                    dev.yucktheslime.tradeofimmersion.life.Life.react(c, "jealousy",
                             "You just saw " + LifeMca.name(actor) + " " + what + " " + LifeMca.name(rival) + ". You feel "
                                     + RelationshipMath.jealousyWords(b.jealousy) + ". React in character (one line).");
                 }
@@ -250,7 +250,7 @@ public final class Romance {
             case MARRIED -> "make it official - let's have the wedding";
             default -> "stay with me";
         };
-        dev.yucktheslime.tradeofimmersion.ai.CompanionBrain.onEvent(c, "romance",
+        dev.yucktheslime.tradeofimmersion.life.Life.react(c, "romance",
                 "You have decided to ask " + player.getGameProfile().getName() + " to " + q + ". Ask them now, sincerely, in one or two lines.");
         player.sendSystemMessage(net.minecraft.network.chat.Component.literal(c.name() + " wants to " + words(to).replace("dating", "date you")
                 .replace("engaged", "get engaged").replace("married", "marry you") + ". Answer with "

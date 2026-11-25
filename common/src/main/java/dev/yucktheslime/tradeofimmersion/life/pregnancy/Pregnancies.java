@@ -166,7 +166,7 @@ public final class Pregnancies {
         tell(server, r, "You're pregnant! The baby is due in about " + days(r.state.total()) + " in-game days.",
                 r.carrierName + " is pregnant with your baby! Due in about " + days(r.state.total()) + " in-game days.");
         LifeEvents.record(server, carrier, "pregnancy", text, carrier.getUUID(), partner == null ? null : partner.getUUID());
-        if (carrier instanceof CompanionEntity c) CompanionBrain.onEvent(c, "pregnancy", "You just found out you are pregnant" +
+        if (carrier instanceof CompanionEntity c) dev.yucktheslime.tradeofimmersion.life.Life.react(c, "pregnancy", "You just found out you are pregnant" +
                 (r.partnerName.isEmpty() ? "" : " with " + r.partnerName + "'s baby") + ". React in character (one line).");
         TradeOfImmersion.LOGGER.info("[tradeofimmersion] Pregnancy: {} (partner {}, {} days, native={})", r.carrierName, r.partnerName,
                 days(r.state.total()), nativeMca);
@@ -214,7 +214,7 @@ public final class Pregnancies {
         String name = PregnancyPhases.phaseName(phase, r.state.phases);
         tell(server, r, "You're now in your " + name + ".", r.carrierName + " is now in the " + name + ".");
         LifeEvents.remember(UUID.fromString(r.carrier), "pregnancy", "You are now in your " + name + " of pregnancy.");
-        if (carrier instanceof CompanionEntity c) CompanionBrain.onEvent(c, "pregnancy", "You are now in your " + name
+        if (carrier instanceof CompanionEntity c) dev.yucktheslime.tradeofimmersion.life.Life.react(c, "pregnancy", "You are now in your " + name
                 + " of pregnancy and you can feel it. Mention it briefly, in character.");
     }
 
@@ -287,8 +287,8 @@ public final class Pregnancies {
         tell(server, r, "Your baby is here!" + (r.babies > 1 ? " (" + r.babies + " of them!)" : ""), r.carrierName + " gave birth to your baby!");
         LifeEvents.record(server, carrier, "birth", text, carrier.getUUID(), r.partner.isEmpty() ? null : UUID.fromString(r.partner));
         if (carrier instanceof VillagerEntityMCA v) v.getVillagerBrain().modifyMoodValue(20);
-        if (carrier instanceof CompanionEntity c) CompanionBrain.onEvent(c, "birth", "You just gave birth to your baby. React in character.");
-        if (partner instanceof CompanionEntity c && c != carrier) CompanionBrain.onEvent(c, "birth", r.carrierName + " just gave birth to your baby!");
+        if (carrier instanceof CompanionEntity c) dev.yucktheslime.tradeofimmersion.life.Life.react(c, "birth", "You just gave birth to your baby. React in character.");
+        if (partner instanceof CompanionEntity c && c != carrier) dev.yucktheslime.tradeofimmersion.life.Life.react(c, "birth", r.carrierName + " just gave birth to your baby!");
     }
 
     /** Ends without a birth (miscarriage, death, or a command). */
@@ -306,7 +306,7 @@ public final class Pregnancies {
         tell(server, r, "miscarriage".equals(why) ? "You lost the baby. Take care of yourself." : "Your pregnancy has ended.",
                 "miscarriage".equals(why) ? r.carrierName + " lost the baby." : r.carrierName + "'s pregnancy has ended.");
         LifeEvents.record(server, carrier, "loss", text, UUID.fromString(r.carrier), r.partner.isEmpty() ? null : UUID.fromString(r.partner));
-        if (carrier instanceof CompanionEntity c && c.isAlive()) CompanionBrain.onEvent(c, "loss", "You have lost your baby. You are grieving.");
+        if (carrier instanceof CompanionEntity c && c.isAlive()) dev.yucktheslime.tradeofimmersion.life.Life.react(c, "loss", "You have lost your baby. You are grieving.");
     }
 
     public static void onDeath(LivingEntity dead) {

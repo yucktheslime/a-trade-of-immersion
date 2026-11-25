@@ -186,7 +186,7 @@ public final class LifeHooks {
                             + (married ? " widowed" : " alone"), partner);
                     Entity pe = LifeMca.find(server, partner);
                     if (pe instanceof VillagerEntityMCA v) v.getVillagerBrain().modifyMoodValue(-30);
-                    if (pe instanceof CompanionEntity pc) dev.yucktheslime.tradeofimmersion.ai.CompanionBrain.onEvent(pc, "death",
+                    if (pe instanceof CompanionEntity pc) dev.yucktheslime.tradeofimmersion.life.Life.react(pc, "death",
                             "Your " + (married ? "spouse " : "partner ") + c.name() + " has died.");
                 }
             }

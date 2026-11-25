@@ -37,6 +37,19 @@ public final class Life {
         if (WARNED.add(what)) TradeOfImmersion.LOGGER.warn("[tradeofimmersion] Phase 2 '{}' hook failed (shown once)", what, t);
     }
 
+    /**
+     * Ask a companion to react in character (pregnancy, birth, jealousy, a proposal...). Notes the
+     * interaction for Phase 4's active-NPC cap and skips the LLM turn when that companion is culled.
+     */
+    public static void react(dev.yucktheslime.tradeofimmersion.entity.CompanionEntity c, String type, String text) {
+        if (c == null || text == null || text.isBlank()) return;
+        try {
+            dev.yucktheslime.tradeofimmersion.ai.CompanionBrain.onEvent(c, type, text);
+        } catch (Throwable t) {
+            warnOnce("react", t);
+        }
+    }
+
     public static void init() {
         LifeConfig.load();
         LifeRegistry.init();

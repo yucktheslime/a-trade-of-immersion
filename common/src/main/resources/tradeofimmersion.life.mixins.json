@@ -15,5 +15,9 @@
   ],
   "injectors": {
     "defaultRequire": 0
-  }
+  },
+  "client": [
+    "client.HumanoidBellyMixin",
+    "client.VillagerDimensionsBellyMixin"
+  ]
 }
