@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.0-SNAPSHOT (unreleased, branch `body-shapes-merge`): MCA Body Shapes bundled (NeoForge)
+- **MCA Body Shapes 0.6.2 is now part of the NeoForge jar** (by yucktheslime, MIT, previously a separate
+  private mod). It ships as a second mod in the same jar with its original mod id `mcabodyshapes`
+  (version 0.7.0-SNAPSHOT), so saved `mcabodyshapes:body_shape` / `body_shape_assigned` data on villagers and
+  players and `config/mcabodyshapes-common.toml` / `-client.toml` keep loading. Remove a separate
+  `mca-body-shapes-*.jar` from `mods/` (two copies of the same mod id will not load). Fabric does not get it.
+- Body-shape sliders, the Shape tab in MCA's villager editor, `/mcabody`, the clothed seat/bust/thigh meshes and
+  the adult-only rule (`BodyShapeAge.isShapeableAdult`) and size caps are unchanged.
+- **One pregnancy, one belly.** The Body Shapes belly mesh (three phases) now follows this mod's pregnancy phases
+  instead of MCA's `HasBaby` / `BabyAge` (which TOI pauses). The server syncs the raw pregnancy progress next to the
+  belly size. TOI's own simple belly (body scale and breast shift) steps aside on MCA models wherever Body Shapes
+  draws the belly (adult MCA villagers and players), and is still used for companions, vanilla-model players and on
+  Fabric. `bellyVisual` in `tradeofimmersion-life.json` turns both off.
+- The Shape tab's pregnancy slider and `/mcabody pregnancy <target> <0..1>` now set a TOI pregnancy: they start one
+  (with the villager's MCA partner, if any), move it to that progress, or end it quietly at 0. Needs
+  `pregnancyPhases` on. 100% is kept just short of birth.
+- The Shape tab is hidden when MCA's editor is open on a TOI companion (shapes cannot be saved on companions).
+- Body Shapes' dev screenshot runner (`devshot`) is not part of the repo and is excluded from every jar.
+
 ## 0.4.0 (2026-11-25): Phases 1-4: chat filter, MCA life/marriage/pregnancy, jobs/mounts/item learning, AI budget
 - **Chat filter / routing.** Public chat only starts an AI turn when a player addresses an NPC: by name
   (whole word, accent-insensitive, nicknames count), a group vocative at the start of the line

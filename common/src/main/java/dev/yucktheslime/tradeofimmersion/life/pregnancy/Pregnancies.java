@@ -386,6 +386,62 @@ public final class Pregnancies {
         return m;
     }
 
+    /**
+     * Raw progress 0..1 over the whole pregnancy for every active carrier (same gate as {@link #bellies}), for the
+     * client sync. MCA Body Shapes' belly mesh maps this onto its three phases.
+     */
+    public static Map<UUID, Float> progress(MinecraftServer server) {
+        Map<UUID, Float> m = new HashMap<>();
+        if (!LifeConfig.get().on(LifeConfig.get().bellyVisual)) return m;
+        long now = LifeMca.now(server);
+        for (Rec r : STORE.data().active.values()) {
+            if (r.state.ended) continue;
+            float p = (float) PregnancyPhases.progress(r.state, now);
+            if (p > 0.001f) m.put(UUID.fromString(r.carrier), Math.round(p * 400) / 400f);
+        }
+        return m;
+    }
+
+    /** Server side: raw progress 0..1 of this carrier's active pregnancy, or 0 when not pregnant. */
+    public static float progressOf(MinecraftServer server, UUID carrier) {
+        Rec r = get(carrier);
+        if (r == null || r.state.ended) return 0;
+        return (float) PregnancyPhases.progress(r.state, LifeMca.now(server));
+    }
+
+    /**
+     * Sets a carrier's pregnancy to {@code progress} (0..1): starts one (with their MCA partner, if any) when they
+     * are not pregnant, moves the start time so the progress matches, or silently ends it at 0. Used by MCA Body
+     * Shapes' editor slider and {@code /mcabody pregnancy}. 1.0 is kept a little short of birth so the pregnancy
+     * does not end on the next tick. Returns false when pregnancy phases are off or nothing changed.
+     */
+    public static boolean setProgress(Entity carrier, double progress) {
+        if (carrier == null || carrier.level().isClientSide) return false;
+        MinecraftServer server = ((ServerLevel) carrier.level()).getServer();
+        double p = Math.max(0, Math.min(1, progress));
+        Rec r = get(carrier.getUUID());
+        if (p <= 0.001) {
+            if (r == null) return false;
+            lose(server, r, carrier, "ended");
+            dev.yucktheslime.tradeofimmersion.life.LifeNet.sync(server, false);
+            return true;
+        }
+        if (!phasesOn()) return false;
+        if (r != null && (r.state.ended || r.pending)) return false;
+        if (r == null) {
+            Entity partner = carrier instanceof VillagerEntityMCA v ? v.getRelationships().getPartner().orElse(null) : null;
+            r = start(carrier, partner, carrier.level().getRandom().nextLong(), false);
+            if (r == null) return false;
+        }
+        long total = r.state.total();
+        long headroom = Math.max(200L, total / 200);
+        long elapsed = Math.min(Math.round(p * total), total - headroom);
+        r.state.start = LifeMca.now(server) - Math.max(1L, elapsed);
+        STORE.dirty();
+        dev.yucktheslime.tradeofimmersion.life.LifeNet.sync(server, false);
+        return true;
+    }
+
     /** One line for prompts and commands, or "" when not pregnant. */
     public static String describe(MinecraftServer server, UUID id, boolean secondPerson) {
         Rec r = get(id);

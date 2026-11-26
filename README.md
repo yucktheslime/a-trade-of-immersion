@@ -37,6 +37,12 @@ MCA Reborn is the only other mod you have to install. Architectury API 13.0.8 is
 
 Use the plain jar, not `-dev-shadow` or `-sources`.
 
+**MCA Body Shapes is included** (NeoForge only, from 0.5.0). The NeoForge jar also contains MCA Body Shapes by
+yucktheslime (MIT, see [LICENSE-mca-body-shapes](LICENSE-mca-body-shapes)) as a second mod, `mcabodyshapes`: body-shape
+sliders in a Shape tab of MCA's villager editor, `/mcabody`, clothed body meshes for adult MCA villagers and players,
+and the pregnancy belly, which grows with this mod's pregnancy phases. Its saved data and config keep working; remove
+any separate `mca-body-shapes` jar from `mods/`.
+
 The Fabric build (`a-trade-of-immersion-fabric-0.3.9.jar`) compiles from the same code, but it is less tested. On Fabric you still need [Fabric API](https://modrinth.com/mod/fabric-api) and the Fabric MCA build. Architectury API is bundled there too; Fabric API is not, because MCA Reborn and Architectury both require it and nearly every Fabric player already has it.
 
 ## Setting up the AI
@@ -412,5 +418,8 @@ Add `-PnoMcabp` to run without the optional addon in dev.
 ## License
 
 LGPL-3.0-or-later
+
+MCA Body Shapes (bundled in the NeoForge jar, package `dev.yucktheslime.mcabodyshapes`) is by yucktheslime under the
+MIT License: [LICENSE-mca-body-shapes](LICENSE-mca-body-shapes).
 
 This mod bundles [Architectury API](https://github.com/architectury/architectury-api) 13.0.8, also licensed under LGPL-3.0. The bundled copy is a separate nested jar, so you can replace it by installing a compatible Architectury API jar yourself. Source: https://github.com/architectury/architectury-api

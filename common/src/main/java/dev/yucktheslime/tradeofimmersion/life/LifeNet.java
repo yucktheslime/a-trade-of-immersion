@@ -17,7 +17,11 @@ import net.minecraft.server.MinecraftServer;
 import java.util.Map;
 import java.util.UUID;
 
-/** Server -> client: belly sizes of pregnant carriers (UUID -> 0..1), sent on join and when they change. */
+/**
+ * Server -> client: belly sizes of pregnant carriers (UUID -> 0..1), sent on join and when they change. The same
+ * payload carries the raw pregnancy progress (0..1 over the whole pregnancy) under {@code "progress"}, which the
+ * bundled MCA Body Shapes belly mesh (NeoForge) uses for its three phases.
+ */
 public final class LifeNet {
     public record Bellies(CompoundTag data) implements CustomPacketPayload {
         public static final Type<Bellies> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(TradeOfImmersion.MOD_ID, "life_bellies"));
@@ -31,6 +35,9 @@ public final class LifeNet {
 
     /** Client side copy (read by the belly render layer). */
     public static volatile Map<UUID, Float> clientBellies = Map.of();
+    /** Client side copy of the raw pregnancy progress (0..1), read by MCA Body Shapes' belly on NeoForge. */
+    public static volatile Map<UUID, Float> clientProgress = Map.of();
+    private static final String PROGRESS = "progress";
     private static CompoundTag last = new CompoundTag();
 
     private LifeNet() {
@@ -38,13 +45,23 @@ public final class LifeNet {
 
     public static void init() {
         if (Platform.getEnvironment() == Env.CLIENT) {
-            NetworkManager.registerReceiver(NetworkManager.s2c(), Bellies.TYPE, Bellies.CODEC, (payload, ctx) -> ctx.queue(() -> clientBellies = decode(payload.data())));
+            NetworkManager.registerReceiver(NetworkManager.s2c(), Bellies.TYPE, Bellies.CODEC, (payload, ctx) -> ctx.queue(() -> {
+                clientBellies = decode(payload.data());
+                clientProgress = decode(payload.data().getCompound(PROGRESS));
+            }));
         } else {
             NetworkManager.registerS2CPayloadType(Bellies.TYPE, Bellies.CODEC);
         }
         PlayerEvent.PLAYER_JOIN.register(player -> {
-            if (Life.server() != null) NetworkManager.sendToPlayer(player, new Bellies(encode(Pregnancies.bellies(Life.server()))));
+            if (Life.server() != null) NetworkManager.sendToPlayer(player, new Bellies(payload(Life.server())));
         });
+    }
+
+    static CompoundTag payload(MinecraftServer server) {
+        CompoundTag t = encode(Pregnancies.bellies(server));
+        CompoundTag p = encode(Pregnancies.progress(server));
+        if (!p.isEmpty()) t.put(PROGRESS, p);
+        return t;
     }
 
     static CompoundTag encode(Map<UUID, Float> m) {
@@ -56,6 +73,7 @@ public final class LifeNet {
     static Map<UUID, Float> decode(CompoundTag t) {
         java.util.HashMap<UUID, Float> m = new java.util.HashMap<>();
         for (String k : t.getAllKeys()) {
+            if (PROGRESS.equals(k)) continue;
             try {
                 m.put(UUID.fromString(k), t.getFloat(k));
             } catch (IllegalArgumentException ignored) {
@@ -65,7 +83,7 @@ public final class LifeNet {
     }
 
     public static void sync(MinecraftServer server, boolean force) {
-        CompoundTag now = encode(Pregnancies.bellies(server));
+        CompoundTag now = payload(server);
         if (!force && now.equals(last)) return;
         last = now;
         NetworkManager.sendToPlayers(server.getPlayerList().getPlayers(), new Bellies(now));

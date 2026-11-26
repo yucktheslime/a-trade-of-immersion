@@ -8,6 +8,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.WeakHashMap;
+import java.util.function.Predicate;
 
 /**
  * Grows a belly on the MCA / player humanoid model from the synced pregnancy progress (0..1). The same model
@@ -16,6 +17,12 @@ import java.util.WeakHashMap;
  */
 public final class BellyVisual {
     private static final WeakHashMap<ModelPart, Float> ORIG_Z = new WeakHashMap<>();
+    /**
+     * Set on NeoForge by the bundled MCA Body Shapes: true for entities whose belly its mesh draws on MCA models
+     * (adult MCA villagers and players). Those are skipped here so the belly is not drawn twice; everything else
+     * (companions, vanilla-model players, and all of Fabric) keeps this simple belly.
+     */
+    public static volatile Predicate<LivingEntity> drawnElsewhere = e -> false;
 
     private BellyVisual() {
     }
@@ -34,6 +41,12 @@ public final class BellyVisual {
     /** After {@code HumanoidModel.setupAnim}: body scale and forward shift. */
     public static void applyBody(LivingEntity e, HumanoidModel<?> model) {
         if (model == null || model.body == null) return;
+        if (model instanceof CommonVillagerModel<?> && drawnElsewhere.test(e)) {
+            // the model is shared: undo a shift left by an entity drawn here before (scales are reset by Body Shapes)
+            Float orig = ORIG_Z.get(model.body);
+            if (orig != null) model.body.z = orig;
+            return;
+        }
         float belly = size(e);
         float max = 3.5f;
         try {
@@ -52,6 +65,7 @@ public final class BellyVisual {
     public static void applyBreasts(LivingEntity e, CommonVillagerModel<?> model) {
         float belly = size(e);
         if (belly <= 0 || model == null) return;
+        if (drawnElsewhere.test(e)) return;
         float max = 3.5f;
         try {
             max = (float) LifeConfig.get().bellyMaxDepth;

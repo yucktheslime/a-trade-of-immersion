@@ -12,6 +12,18 @@ description = '''
 AI companions for MCA Reborn: a player-like NPC with a real inventory that uses any mod's items, rides horses, boats and modded mounts, fights, remembers what happens around it, learns items and talks with MCA villagers. Runs on a free local LLM (Ollama) or any OpenAI-compatible API (OpenRouter), or a Kagrenac server.
 '''
 
+# MCA Body Shapes (by yucktheslime, MIT) ships in this jar as a second mod with its original mod id, so its
+# saved body_shape attachments and config/mcabodyshapes-*.toml files keep loading. NeoForge only.
+[[mods]]
+modId = "mcabodyshapes"
+version = "${body_shapes_version}"
+displayName = "MCA Body Shapes"
+authors = "yucktheslime"
+description = '''
+Adds saved body-shape sliders, clothed seat geometry with optional bounce, and a pregnancy belly to MCA Reborn villagers.
+Clothed body proportions only. This add-on is strictly non-explicit. Bundled with A Trade of Immersion, whose pregnancy phases drive the belly.
+'''
+
 # MCA Reborn villager editor, needle and comb on companions (common mixins).
 [[mixins]]
 config = "tradeofimmersion.mixins.json"
@@ -31,6 +43,10 @@ config = "tradeofimmersion.mcabp.mixins.json"
 # Fix for "MCA: Cobblemon" 1.0.1 crashing on MCA 7.7.36 (gifting a Poke Ball); skipped when that mod is absent.
 [[mixins]]
 config = "tradeofimmersion.mcacobblemon.mixins.json"
+
+# MCA Body Shapes: Shape tab in MCA's editor, villager/player model shaping and the belly mesh (client only).
+[[mixins]]
+config = "mcabodyshapes.mixins.json"
 
 [[dependencies.tradeofimmersion]]
 modId = "neoforge"
@@ -68,3 +84,48 @@ type = "optional"
 versionRange = "[0.1.8,)"
 ordering = "NONE"
 side = "CLIENT"
+
+[[dependencies.mcabodyshapes]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.mcabodyshapes]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.mcabodyshapes]]
+modId = "mca"
+type = "required"
+versionRange = "[7.7,8.0)"
+ordering = "AFTER"
+side = "BOTH"
+
+# The belly reads A Trade of Immersion's pregnancy phases (same jar).
+[[dependencies.mcabodyshapes]]
+modId = "tradeofimmersion"
+type = "required"
+versionRange = "*"
+ordering = "AFTER"
+side = "BOTH"
+
+# MCA: Female Gender Physics, optional: the bust mesh is left to it, and the bust slider writes MCA's breast gene.
+[[dependencies.mcabodyshapes]]
+modId = "mcabp"
+type = "optional"
+versionRange = "*"
+ordering = "NONE"
+side = "BOTH"
+
+# MCA Expressions, optional: body-part scales are applied after setupAnim so its animations keep their motion.
+[[dependencies.mcabodyshapes]]
+modId = "mcaexpressions"
+type = "optional"
+versionRange = "*"
+ordering = "NONE"
+side = "BOTH"

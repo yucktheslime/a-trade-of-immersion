@@ -44,10 +44,18 @@ dependencies {
 }
 
 processResources {
-    inputs.property "version", project.version
+    def expandProps = [version: project.version, body_shapes_version: rootProject.body_shapes_version]
+    inputs.properties expandProps
     filesMatching("META-INF/neoforge.mods.toml") {
-        expand "version": project.version
+        expand expandProps
     }
+}
+
+// MCA Body Shapes' dev screenshot runner (package devshot and its test skin) is never part of this repo,
+// but keep it out of every jar even if a local copy is dropped into the source tree for screenshots.
+tasks.withType(AbstractArchiveTask).configureEach {
+    exclude "dev/yucktheslime/mcabodyshapes/devshot/**"
+    exclude "assets/mcabodyshapes/skins/devshot/**"
 }
 
 shadowJar {
