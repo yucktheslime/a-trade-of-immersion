@@ -40,6 +40,10 @@ public final class LifeConfig {
     // ---- pregnancy
     /** Pregnancy goes through phases instead of MCA's instant baby item (and villager-villager gestation uses them too). */
     public boolean pregnancyPhases = true;
+    /**
+     * Number of pregnancy phases (default 3). The bundled MCA Body Shapes belly mesh (NeoForge)
+     * maps pregnancy progress onto thirds and only lines up with this default of 3 phases.
+     */
     public int pregnancyPhaseCount = 3;
     /** In-game days per phase (one day = 20 real minutes). */
     public double pregnancyDaysPerPhase = 3.0;

@@ -73,7 +73,8 @@ public final class BodyShapeCommonConfig {
 
         MAX_BELLY_DEPTH = builder
                 .comment("Pregnancy belly: highest peak depth, in model pixels, at the late phase (phase 3).",
-                        "2.5 is the hard cap; a config can only lower it, never raise it. Phases 1 and 2 scale down with it.")
+                        "2.5 is the hard cap; a config can only lower it, never raise it. Phases 1 and 2 scale down with it.",
+                        "The belly mesh uses thirds of pregnancy progress (0–1/3, 1/3–2/3, 2/3–1) and only lines up with A Trade of Immersion's default pregnancyPhaseCount of 3.")
                 .translation("mcabodyshapes.config.max_belly_depth")
                 .defineInRange("maxBellyDepth", BELLY_DEPTH_HARD_MAX, 0.0d, BELLY_DEPTH_HARD_MAX);
 

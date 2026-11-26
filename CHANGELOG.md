@@ -17,6 +17,7 @@
   (with the villager's MCA partner, if any), move it to that progress, or end it quietly at 0. Needs
   `pregnancyPhases` on. 100% is kept just short of birth.
 - The Shape tab is hidden when MCA's editor is open on a TOI companion (shapes cannot be saved on companions).
+- The Body Shapes belly mesh uses thirds of pregnancy progress and only lines up with the default `pregnancyPhaseCount` of 3 (noted in `LifeConfig` and the `maxBellyDepth` config comment).
 - Body Shapes' dev screenshot runner (`devshot`) is not part of the repo and is excluded from every jar.
 
 ## 0.4.0 (2026-11-25): Phases 1-4: chat filter, MCA life/marriage/pregnancy, jobs/mounts/item learning, AI budget
