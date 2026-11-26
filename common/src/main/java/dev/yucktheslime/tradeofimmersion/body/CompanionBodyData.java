@@ -11,8 +11,14 @@ import java.util.Map;
  * {@code Genetics.GeneType} names ({@code Size}, {@code Width}, {@code Breast}, {@code Melanin}, ...), values 0..1.
  */
 public final class CompanionBodyData {
-    /** {@code male}, {@code female}, {@code neutral}, or null (= config / character detection). */
+    /** {@code male}, {@code female}, {@code neutral}, or null (= unset; body shapes never infer a gender). */
     public String gender;
+    /**
+     * Explicit MCA age state ({@code adult}, {@code child}, {@code teen}, ...), or null if unset.
+     * Written as {@code adult} when a look is first generated. Body shapes only apply when this is
+     * {@code adult} and {@link #gender} (or the companion's own gender) is explicitly female.
+     */
+    public String ageState;
     /** Last known companion name (for display and tab completion only). */
     public String name;
     public final Map<String, Float> genes = new LinkedHashMap<>();
@@ -30,7 +36,7 @@ public final class CompanionBodyData {
     public String lookGender;
 
     public boolean isEmpty() {
-        return gender == null && genes.isEmpty() && (mca == null || mca.isEmpty()) && look == null && lookGender == null;
+        return gender == null && ageState == null && genes.isEmpty() && (mca == null || mca.isEmpty()) && look == null && lookGender == null;
     }
 
     public boolean mcaLook() {
@@ -44,6 +50,7 @@ public final class CompanionBodyData {
     public CompoundTag toTag() {
         CompoundTag t = new CompoundTag();
         if (gender != null) t.putString("gender", gender);
+        if (ageState != null) t.putString("ageState", ageState);
         if (name != null) t.putString("name", name);
         CompoundTag g = new CompoundTag();
         genes.forEach(g::putFloat);
@@ -57,6 +64,7 @@ public final class CompanionBodyData {
     public static CompanionBodyData fromTag(CompoundTag t) {
         CompanionBodyData d = new CompanionBodyData();
         if (t.contains("gender")) d.gender = t.getString("gender");
+        if (t.contains("ageState")) d.ageState = t.getString("ageState");
         if (t.contains("name")) d.name = t.getString("name");
         CompoundTag g = t.getCompound("genes");
         for (String k : g.getAllKeys()) d.genes.put(k, g.getFloat(k));

@@ -18,6 +18,11 @@
   `pregnancyPhases` on. 100% is kept just short of birth.
 - The Shape tab is hidden when MCA's editor is open on a TOI companion (shapes cannot be saved on companions).
 - The Body Shapes belly mesh uses thirds of pregnancy progress and only lines up with the default `pregnancyPhaseCount` of 3 (noted in `LifeConfig` and the `maxBellyDepth` config comment).
+- **Companion body shapes (NeoForge).** An A Trade of Immersion companion is shaped only when it is
+  explicitly female *and* explicitly adult. Gender comes from the companion or its saved body data,
+  with no fallback to `companionGender` and no default of male. Age is the saved `ageState` (written
+  as `adult` when a look is first generated). If either is unset or unrecognized, the companion stays
+  unshaped. The Shape tab follows the same rule.
 - Body Shapes' dev screenshot runner (`devshot`) is not part of the repo and is excluded from every jar.
 
 ## 0.4.0 (2026-11-25): Phases 1-4: chat filter, MCA life/marriage/pregnancy, jobs/mounts/item learning, AI budget

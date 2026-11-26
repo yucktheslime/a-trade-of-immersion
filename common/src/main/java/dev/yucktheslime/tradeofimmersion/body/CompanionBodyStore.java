@@ -39,6 +39,7 @@ public final class CompanionBodyStore {
                 JsonObject o = e.getValue().getAsJsonObject();
                 CompanionBodyData d = new CompanionBodyData();
                 if (o.has("gender")) d.gender = o.get("gender").getAsString();
+                if (o.has("ageState")) d.ageState = o.get("ageState").getAsString();
                 if (o.has("name")) d.name = o.get("name").getAsString();
                 if (o.has("genes")) {
                     for (var g : o.getAsJsonObject("genes").entrySet()) d.genes.put(g.getKey(), g.getValue().getAsFloat());
@@ -83,6 +84,7 @@ public final class CompanionBodyStore {
         data.forEach((id, d) -> {
             JsonObject o = new JsonObject();
             if (d.gender != null) o.addProperty("gender", d.gender);
+            if (d.ageState != null) o.addProperty("ageState", d.ageState);
             if (d.name != null) o.addProperty("name", d.name);
             JsonObject g = new JsonObject();
             d.genes.forEach(g::addProperty);

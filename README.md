@@ -176,7 +176,7 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 - **Companions look like MCA villagers** (since 0.3.7): MCA Reborn's villager model with its own genes, skin, face,
   clothes and hair, picked for its gender the way MCA does for a new villager, saved in the world and the same for
   every player. Existing companions get one the first time they load. Armor and held items render on the MCA body;
-  with MCA Body Shapes installed they also get a random body shape like villagers.
+  with MCA Body Shapes installed, an explicitly female and explicitly adult companion also gets a random body shape like villagers (unset gender or age stays unshaped).
   `/npc skin <npc> player` (or naming a skin) opts one out to a player skin, `/npc skin <npc> mca` switches back, and
   `/npc skin <npc> random` rolls a new MCA look.
   The owner or an operator can edit (anyone with the editor item if `mcaEditorItemForEveryone` is on).

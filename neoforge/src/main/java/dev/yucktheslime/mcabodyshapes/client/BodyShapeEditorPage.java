@@ -273,6 +273,13 @@ public final class BodyShapeEditorPage {
         return findEntity(Minecraft.getInstance(), targetId) instanceof dev.yucktheslime.tradeofimmersion.entity.CompanionEntity;
     }
 
+    /** Shape tab is offered only for companions that are explicitly female and explicitly adult. */
+    public static boolean isShapeableCompanion(UUID targetId) {
+        var entity = findEntity(Minecraft.getInstance(), targetId);
+        return entity instanceof dev.yucktheslime.tradeofimmersion.entity.CompanionEntity
+                && dev.yucktheslime.tradeofimmersion.body.CompanionShapeEligibility.isShapeable(entity);
+    }
+
     private static Entity findEntity(Minecraft minecraft, UUID targetId) {
         if (minecraft.level == null) {
             return null;

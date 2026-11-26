@@ -73,7 +73,7 @@ public final class CompanionLooks {
                 dirty = true;
             }
         }
-        if (d != null && d.mcaLook()) assignBodyShape(c);
+        if (d != null && d.mcaLook() && CompanionShapeEligibility.isShapeable(c)) assignBodyShape(c);
     }
 
     /** Saves and syncs once per server tick when looks were added. */
@@ -120,6 +120,8 @@ public final class CompanionLooks {
         if (stored.getString("Clothes").isBlank()) stored.putString("Clothes", "mca:missing"); // pool empty: don't retry
         d.mca = stored;
         d.lookGender = genderName;
+        // Record the creation age explicitly so body shapes do not have to infer it.
+        if (d.ageState == null || d.ageState.isBlank()) d.ageState = "adult";
         // /toi body gene edits stay in d.genes and still win over the generated genes.
         TradeOfImmersion.LOGGER.info("[tradeofimmersion] Companion {} got an MCA look ({}, clothes {}, hair {})", c.name(), genderName,
                 v.getClothes(), v.getHairStyleId());
@@ -127,6 +129,7 @@ public final class CompanionLooks {
 
     /** MCA Body Shapes (optional, NeoForge): a random adult body like the addon gives MCA villagers. Reflection only. */
     private static void assignBodyShape(Entity e) {
+        if (!CompanionShapeEligibility.isShapeable(e)) return;
         if (Boolean.TRUE.equals(bodyShapesMissing)) return;
         try {
             if (bodyShapesMissing == null) {

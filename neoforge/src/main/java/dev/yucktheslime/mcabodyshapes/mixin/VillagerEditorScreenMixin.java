@@ -104,7 +104,8 @@ public abstract class VillagerEditorScreenMixin implements VillagerEditorAccess 
             return false;
         }
         if (BodyShapeEditorPage.isToiCompanion(this.villagerUUID)) {
-            return false;
+            // Only explicitly female, explicitly adult companions get the Shape tab.
+            return BodyShapeEditorPage.isShapeableCompanion(this.villagerUUID);
         }
         AgeState age = this.villager.getAgeState();
         if (age == AgeState.ADULT) {
