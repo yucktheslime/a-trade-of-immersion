@@ -2,6 +2,7 @@ package dev.yucktheslime.tradeofimmersion.client.voice;
 
 import dev.yucktheslime.tradeofimmersion.TradeOfImmersion;
 import dev.yucktheslime.tradeofimmersion.config.ToiConfig;
+import dev.yucktheslime.tradeofimmersion.voice.ToiVoicePolicy;
 import dev.yucktheslime.tradeofimmersion.voice.VoiceSync;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
@@ -10,6 +11,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Client side of NPC voice: collects the WAV chunks the server streams ({@link VoiceSync.VoiceChunkPayload}) and
@@ -18,6 +20,9 @@ import java.util.Map;
 public final class VoiceClient {
     private static final Map<Integer, NpcVoiceInstance> PLAYING = new HashMap<>();
     private static final Map<Integer, Clip> CLIPS = new HashMap<>();
+    /** Speaker UUID -> when the server said a TOI clip is on the way (or recently played). */
+    private static final Map<UUID, Long> IMMINENT = new HashMap<>();
+    private static final long IMMINENT_MS = 15_000;
     private static volatile String lastStatus = "no line voiced yet";
 
     private static final class Clip {
@@ -35,6 +40,40 @@ public final class VoiceClient {
 
     public static String status() {
         return lastStatus;
+    }
+
+    public static void onImminent(VoiceSync.VoiceImminentPayload p) {
+        if (p.speaker() != null) markImminent(p.speaker());
+    }
+
+    /** MCA should not speak this villager line: we have (or just had) a TOI clip for them. */
+    public static boolean shouldSuppressMcaTts(UUID speaker) {
+        ToiConfig cfg = ToiConfig.get();
+        return ToiVoicePolicy.shouldSuppressMcaTts(cfg.voicePlay, cfg.voiceVillagers, speaker != null && isImminent(speaker));
+    }
+
+    /** Hide MCA's "language is not supported" chat while we are handling villager voice. */
+    public static boolean suppressLanguageWarning() {
+        ToiConfig cfg = ToiConfig.get();
+        boolean local = cfg.voiceEnabled && cfg.voiceVillagers && cfg.mcaLinesUseToiVoice;
+        return ToiVoicePolicy.shouldSuppressLanguageWarning(cfg.voicePlay, hasRecentImminent(), local);
+    }
+
+    private static synchronized void markImminent(UUID speaker) {
+        long now = System.currentTimeMillis();
+        IMMINENT.entrySet().removeIf(e -> now - e.getValue() > IMMINENT_MS);
+        IMMINENT.put(speaker, now);
+    }
+
+    private static synchronized boolean isImminent(UUID speaker) {
+        Long at = IMMINENT.get(speaker);
+        return at != null && System.currentTimeMillis() - at <= IMMINENT_MS;
+    }
+
+    private static synchronized boolean hasRecentImminent() {
+        long now = System.currentTimeMillis();
+        IMMINENT.entrySet().removeIf(e -> now - e.getValue() > IMMINENT_MS);
+        return !IMMINENT.isEmpty();
     }
 
     public static void onChunk(VoiceSync.VoiceChunkPayload p) {
@@ -69,6 +108,7 @@ public final class VoiceClient {
         }
         NpcVoiceInstance old = PLAYING.remove(entityId);
         if (old != null) mc.getSoundManager().stop(old); // a newer line interrupts the old one
+        if (e.getUUID() != null) markImminent(e.getUUID());
         NpcVoiceInstance inst = new NpcVoiceInstance(e, stream, cfg.voiceVolume, cfg.voiceRange, pitch);
         PLAYING.put(entityId, inst);
         PLAYING.values().removeIf(i -> i.isStopped() || i.speaker().isRemoved());

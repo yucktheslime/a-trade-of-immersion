@@ -11,8 +11,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * MCA villager lines (MCA's own and the ones our AI gives villagers) arrive as MCA's VillagerMessage and MCA puts
- * them in chat. With the dialogue box on they go to the box instead; MCA's own text-to-speech still runs. With
- * mirrorToChat on, MCA's handler runs as usual too. Optional: skipped when MCA changes this method.
+ * them in chat. With the dialogue box on they go to the box instead. MCA's own text-to-speech is skipped when
+ * this mod is already voicing the line ({@code voiceEnabled} / {@code mcaLinesUseToiVoice}). With
+ * mirrorToChat on, MCA's handler runs as usual too (SpeechManager is still skipped by
+ * {@code McaSpeechManagerMixin} when we are voicing). Optional: skipped when MCA changes this method.
  */
 @Mixin(value = ClientHandlerImpl.class, remap = false)
 public abstract class McaVillagerMessageMixin {
@@ -20,7 +22,9 @@ public abstract class McaVillagerMessageMixin {
     private void tradeofimmersion$toDialogueBox(VillagerMessage message, CallbackInfo ci) {
         try {
             if (DialogueClient.onMcaVillagerLine(message.prefix(), message.message(), message.uuid())) {
-                SpeechManager.INSTANCE.onChatMessage(message.message(), message.uuid());
+                if (!dev.yucktheslime.tradeofimmersion.client.voice.VoiceClient.shouldSuppressMcaTts(message.uuid())) {
+                    SpeechManager.INSTANCE.onChatMessage(message.message(), message.uuid());
+                }
                 ci.cancel();
             }
         } catch (RuntimeException | LinkageError e) {

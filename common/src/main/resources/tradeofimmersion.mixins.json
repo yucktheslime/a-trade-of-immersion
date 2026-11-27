@@ -5,12 +5,15 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "GetVillagerRequestMixin",
+    "McaMessengerVoiceMixin",
     "VillagerEditorSyncRequestMixin"
   ],
   "injectors": {
     "defaultRequire": 0
   },
   "client": [
+    "client.McaLanguageNotSupportedMixin",
+    "client.McaSpeechManagerMixin",
     "client.McaVillagerMessageMixin"
   ]
 }

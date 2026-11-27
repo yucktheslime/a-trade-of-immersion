@@ -126,6 +126,8 @@ What you get with the bundled server ([kagrenac-server/](kagrenac-server/MINECRA
 - **NPC selection:** when several of your companions are near and you name none, `decision.php` picks who answers.
 - **Interruptions:** a new line while a reply is still coming cancels it (`cancel.php`).
 - **Voice (off by default):** PocketTTS replies played from the NPC's position. Set `voiceEnabled`.
+  When it is on, MCA's own scripted villager lines use the same per-NPC PocketTTS voice by default
+  (`mcaLinesUseToiVoice`), instead of MCA's built-in TTS.
 - **Plugins:** the dashboard **Plugins** page can enable bundled examples (mod item knowledge, a sample wave
   action) or install a zip / GitHub plugin. Plugins run code on the server; install only ones you trust, and
   expect to enter the server token. See [kagrenac-server/docs/PLUGINS.md](kagrenac-server/docs/PLUGINS.md).
@@ -154,7 +156,8 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
   box at the bottom right instead of the main chat, with the speaker's name and a fade-out.
   - **V** (or **Enter** while looking at an NPC) opens a talk field for the NPC you look at (or the last one that
     spoke). **Tab** picks the next NPC nearby, **Enter** sends, the mouse wheel scrolls back. **H** opens the
-    scroll-back. In MCA's interaction screen a **Talk (AI)** button (or V) opens it for that villager.
+    scroll-back. In MCA's interaction screen a **Talk (AI)** button (or V) opens it for that villager
+    (the box stays open; it no longer closes itself a moment later).
   - **Hold B** to speak: the mod records your microphone, turns it into text with your speech-to-text service
     (Parakeet in DwemerDistro, through Kagrenac) and says it to the NPC you look at. "Listening..." and
     "Transcribing..." show in the box. All keys can be changed in **Options → Controls → A Trade of Immersion**.
@@ -279,6 +282,7 @@ If the real backend fails, the mock also answers during the cooldown (`aiFallbac
 | `voiceEnabled` | false | server side: fetch spoken replies from Kagrenac and stream them to nearby players (needs TTS on the Kagrenac server) |
 | `voicePlay` | true | per player: `false` mutes NPC voices |
 | `voiceVillagers` | true | voice MCA villagers' lines too |
+| `mcaLinesUseToiVoice` | true | when voice is on, speak MCA's own scripted villager lines through PocketTTS (the same per-NPC voice) instead of MCA's TTS. Off: those scripted lines use MCA's TTS again |
 | `voiceVolume`, `voiceRange` | 1.0, 24 | volume and hearing distance in blocks (Voice/Speech slider applies) |
 
 **Dialogue box and speech input (0.3.8)**

@@ -49,6 +49,7 @@ public final class DialogueClient {
     private static long lastSpeakerTime;
     private static boolean enterWasDown;
     private static Button mcaTalkButton;
+    private static final DialogueOpenGuard.State OPEN_GUARD = new DialogueOpenGuard.State();
 
     private DialogueClient() {
     }
@@ -79,8 +80,7 @@ public final class DialogueClient {
             Entity v = McaScreens.villager(screen);
             if (v != null && button == 0 && mcaTalkButton != null && mcaTalkButton.isMouseOver(mx, my)) {
                 mcaTalkButton.playDownSound(mc.getSoundManager());
-                McaScreens.close(screen);
-                DialogueScreen.open(v, "", false);
+                openFromMca(screen, v, false);
                 return EventResult.interruptTrue();
             }
             return EventResult.pass();
@@ -88,8 +88,7 @@ public final class DialogueClient {
         ClientScreenInputEvent.KEY_PRESSED_PRE.register((mc, screen, key, scan, mods) -> {
             Entity v = McaScreens.villager(screen);
             if (v != null && TALK.matches(key, scan)) {
-                McaScreens.close(screen);
-                DialogueScreen.open(v, "", false);
+                openFromMca(screen, v, true);
                 return EventResult.interruptTrue();
             }
             return EventResult.pass();
@@ -237,12 +236,44 @@ public final class DialogueClient {
 
     // ------------------------------------------------------------------ keys
 
+    /**
+     * Close MCA's interaction screen and open the talk box a couple of ticks later. MCA's close tells the
+     * server the interaction ended, and the server's {@code closeContainer()} reply would otherwise wipe the
+     * new box with {@code setScreen(null)}. {@code fromTalkKey} also swallows the leaked V (or rebound key)
+     * so it is not typed into the field.
+     */
+    private static void openFromMca(Screen mcaScreen, Entity villager, boolean fromTalkKey) {
+        McaScreens.close(mcaScreen);
+        DialogueOpenGuard.request(OPEN_GUARD, villager.getId(), false, fromTalkKey);
+    }
+
+    static void userClosedDialogue() {
+        DialogueOpenGuard.markUserClosed(OPEN_GUARD);
+    }
+
+    static boolean suppressTalkChar() {
+        return DialogueOpenGuard.suppressTalkChar(OPEN_GUARD, TALK.isDown());
+    }
+
     private static void tick(Minecraft mc) {
         if (mc.player == null) return;
         SttClient.tick(mc);
         Screen screen = mc.screen;
         boolean enterDown = InputConstants.isKeyDown(mc.getWindow().getWindow(), GLFW.GLFW_KEY_ENTER);
-        if (screen == null) {
+        boolean pending = OPEN_GUARD.hasPending();
+        if (pending) {
+            // V may still be held after we closed MCA's screen; don't also open from the world-key path.
+            while (TALK.consumeClick()) {}
+            while (HISTORY.consumeClick()) {}
+        }
+        DialogueOpenGuard.Action action = DialogueOpenGuard.tick(OPEN_GUARD, screen instanceof DialogueScreen);
+        if (action == DialogueOpenGuard.Action.OPEN || action == DialogueOpenGuard.Action.REOPEN) {
+            int id = action == DialogueOpenGuard.Action.OPEN ? OPEN_GUARD.pendingEntityId() : OPEN_GUARD.guardEntityId();
+            boolean history = action == DialogueOpenGuard.Action.OPEN ? OPEN_GUARD.pendingHistory() : OPEN_GUARD.guardHistory();
+            Entity v = mc.level != null ? mc.level.getEntity(id) : null;
+            DialogueScreen.open(talkable(v) ? v : target(), "", history);
+        }
+        if (screen == null && !pending && action != DialogueOpenGuard.Action.OPEN && action != DialogueOpenGuard.Action.REOPEN) {
             while (TALK.consumeClick()) DialogueScreen.open(target(), "", false);
             while (HISTORY.consumeClick()) DialogueScreen.open(target(), "", true);
             if (enterDown && !enterWasDown && mc.hitResult instanceof EntityHitResult eh && talkable(eh.getEntity())) {

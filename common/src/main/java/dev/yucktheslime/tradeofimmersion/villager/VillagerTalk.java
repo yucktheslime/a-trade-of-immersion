@@ -77,9 +77,10 @@ public final class VillagerTalk {
                         return;
                     }
                     String clean = line.replaceAll("^\"|\"$", "").trim();
-                    McaVillagerUtil.say(vill, clean);
                     dev.yucktheslime.tradeofimmersion.voice.VoiceSync.spoke(vill, dev.yucktheslime.tradeofimmersion.ai.KagrenacBackend.villagerId(vid.toString()),
                             clean, "", prof.gender().isEmpty() ? "neutral" : prof.gender());
+
+                    McaVillagerUtil.say(vill, clean);
                     dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.event("villager_spoke", null,
                             vName + " (villager) told " + (comp == null ? "a traveller" : comp.name()) + ": " + clean);
                     ConversationMemoryStore.get().append(vid, vName, comp == null ? "" : comp.name(), ConversationMemoryStore.Speaker.VILLAGER, clean, vill.level().getGameTime());
@@ -144,9 +145,10 @@ public final class VillagerTalk {
                         return;
                     }
                     String clean = line.replaceAll("^\"|\"$", "").trim();
-                    McaVillagerUtil.say(vill, clean);
                     dev.yucktheslime.tradeofimmersion.voice.VoiceSync.spoke(vill, dev.yucktheslime.tradeofimmersion.ai.KagrenacBackend.villagerId(vid.toString()),
                             clean, "", prof.gender().isEmpty() ? "neutral" : prof.gender());
+
+                    McaVillagerUtil.say(vill, clean);
                     dev.yucktheslime.tradeofimmersion.ai.KagrenacWorld.event("villager_spoke", null, vName + " (villager) told " + who + ": " + clean);
                     ConversationMemoryStore.get().append(vid, vName, who, ConversationMemoryStore.Speaker.VILLAGER, clean, vill.level().getGameTime());
                 }));

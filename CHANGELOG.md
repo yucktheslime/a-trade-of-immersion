@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.1 (2026-11-26): Talk (AI) box no longer closes instantly
+- **Talk (AI) box.** Clicking **Talk (AI)** (or pressing V) on MCA's interaction screen no longer closes the
+  talk field immediately. MCA's `InteractScreen.onClose` tells the server the interaction ended, and the server
+  calls `stopInteracting()` → `ServerPlayer.closeContainer()`; the client's `ClientboundContainerClosePacket`
+  then runs `LocalPlayer.clientSideCloseContainer()`, which always does `setScreen(null)` and was wiping the
+  new box a tick later. The box now opens a couple of ticks after MCA's screen closes, and if something else
+  closes it in the first moments without you closing it (Escape or Send), it reopens once. The V key is not
+  typed into the field.
+- **MCA text-to-speech.** When this mod's voice is on and it is voicing a line (AI replies, and by default
+  MCA's own scripted villager lines too), MCA's built-in TTS is not called, so you no longer get "Your game
+  language is not supported by the text-to-speech" and you don't hear two voices. `mcaLinesUseToiVoice`
+  (default true) sends MCA's scripted lines through Kagrenac PocketTTS with the same per-NPC voice. Turn it
+  off to leave those scripted lines to MCA's TTS. If this mod's voice is off or cannot play, MCA's TTS is
+  used as before.
+
+
 ## 0.5.0 (2026-11-26): MCA Body Shapes bundled (NeoForge), shapes for adult female companions
 - **MCA Body Shapes 0.6.2 is now part of the NeoForge jar** (by yucktheslime, MIT, previously a separate
   private mod). It ships as a second mod in the same jar with its original mod id `mcabodyshapes`

@@ -19,6 +19,7 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -33,6 +34,11 @@ public final class VoiceSync {
     private static final int MAX_PENDING = 4;
     private static final AtomicInteger PENDING = new AtomicInteger();
     private static final AtomicInteger CLIP_IDS = new AtomicInteger();
+    private static final long DEDUPE_MS = 2_000;
+    private static final Object DEDUPE_LOCK = new Object();
+    private static int lastDedupeEntity = -1;
+    private static int lastDedupeHash;
+    private static long lastDedupeAt;
     private static volatile String lastStatus = "no line voiced yet";
 
     /** One piece of a WAV clip for the entity; the client plays the clip when all {@code total} pieces arrived. */
@@ -57,6 +63,24 @@ public final class VoiceSync {
         }
     }
 
+    /**
+     * Sent as soon as the server decides it will voice a line, so the client can skip MCA's TTS before
+     * the WAV chunks arrive. Must go out before MCA's {@code VillagerMessage}.
+     */
+    public record VoiceImminentPayload(int entityId, UUID speaker) implements CustomPacketPayload {
+        public static final Type<VoiceImminentPayload> TYPE =
+                new Type<>(ResourceLocation.fromNamespaceAndPath(TradeOfImmersion.MOD_ID, "npc_voice_imminent"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, VoiceImminentPayload> CODEC = StreamCodec.of((buf, p) -> {
+            buf.writeVarInt(p.entityId());
+            buf.writeUUID(p.speaker());
+        }, buf -> new VoiceImminentPayload(buf.readVarInt(), buf.readUUID()));
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     private VoiceSync() {
     }
 
@@ -64,8 +88,11 @@ public final class VoiceSync {
         if (Platform.getEnvironment() == Env.CLIENT) {
             NetworkManager.registerReceiver(NetworkManager.s2c(), VoiceChunkPayload.TYPE, VoiceChunkPayload.CODEC,
                     (payload, ctx) -> ctx.queue(() -> dev.yucktheslime.tradeofimmersion.client.voice.VoiceClient.onChunk(payload)));
+            NetworkManager.registerReceiver(NetworkManager.s2c(), VoiceImminentPayload.TYPE, VoiceImminentPayload.CODEC,
+                    (payload, ctx) -> ctx.queue(() -> dev.yucktheslime.tradeofimmersion.client.voice.VoiceClient.onImminent(payload)));
         } else {
             NetworkManager.registerS2CPayloadType(VoiceChunkPayload.TYPE, VoiceChunkPayload.CODEC);
+            NetworkManager.registerS2CPayloadType(VoiceImminentPayload.TYPE, VoiceImminentPayload.CODEC);
         }
     }
 
@@ -81,13 +108,17 @@ public final class VoiceSync {
         if (villager && !cfg.voiceVillagers) return;
         KagrenacBackend k = KagrenacWorld.kagrenac();
         if (k == null || !k.has("speak")) return;
-        if (nearby(level, speaker).isEmpty()) return;
+        List<ServerPlayer> near = nearby(level, speaker);
+        if (near.isEmpty()) return;
         if (PENDING.get() >= MAX_PENDING) {
             lastStatus = "skipped a line (" + MAX_PENDING + " voice requests already waiting)";
             return;
         }
         String line = text.replaceAll("\\s+", " ").trim();
         if (line.length() > 1000) line = line.substring(0, 1000);
+        if (duplicate(speaker.getId(), line)) return;
+        // Tell clients first, so MCA's VillagerMessage (sent after this returns) does not start MCA's TTS.
+        NetworkManager.sendToPlayers(near, new VoiceImminentPayload(speaker.getId(), speaker.getUUID()));
         PENDING.incrementAndGet();
         MinecraftServer srv = level.getServer();
         int entityId = speaker.getId();
@@ -103,6 +134,18 @@ public final class VoiceSync {
             }
             srv.execute(() -> send(level, entityId, villager, speech.wav(), speech.pitch(), System.currentTimeMillis() - started));
         });
+    }
+
+    private static boolean duplicate(int entityId, String line) {
+        int hash = line.hashCode();
+        long now = System.currentTimeMillis();
+        synchronized (DEDUPE_LOCK) {
+            if (lastDedupeEntity == entityId && lastDedupeHash == hash && now - lastDedupeAt < DEDUPE_MS) return true;
+            lastDedupeEntity = entityId;
+            lastDedupeHash = hash;
+            lastDedupeAt = now;
+            return false;
+        }
     }
 
     private static List<ServerPlayer> nearby(ServerLevel level, Entity speaker) {

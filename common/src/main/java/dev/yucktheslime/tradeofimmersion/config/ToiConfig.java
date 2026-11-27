@@ -145,8 +145,16 @@ public final class ToiConfig {
     public boolean voiceEnabled = false;
     /** Client side: play NPC voice the server streams (set false to mute it on this computer). */
     public boolean voicePlay = true;
-    /** Also speak MCA villager lines. */
+    /** Also speak MCA villager lines (this mod's AI replies, and MCA's own scripted lines when {@code mcaLinesUseToiVoice} is on). */
     public boolean voiceVillagers = true;
+    /**
+     * When voice is on, speak MCA Reborn's own scripted villager lines (greetings, interaction-screen replies, and
+     * so on) through this mod's Kagrenac PocketTTS voice — the same per-NPC voice as AI lines — instead of MCA's
+     * built-in text-to-speech. Off: those scripted lines use MCA's TTS again; AI lines still use this mod's voice.
+     * Default true, so MCA's "Your game language is not supported by the text-to-speech" warning does not appear
+     * while this mod is voicing the line.
+     */
+    public boolean mcaLinesUseToiVoice = true;
     /** Voice volume 0..1 (also scaled by the "Voice/Speech" volume slider). */
     public float voiceVolume = 1.0f;
     /** Voice is heard up to this many blocks from the NPC. */

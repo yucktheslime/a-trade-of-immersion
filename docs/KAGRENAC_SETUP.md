@@ -548,6 +548,7 @@ that runs it"). That is on purpose: the dashboard has no password. Keep using it
 | `kagrenacUseDecision` | true | let the server pick which companion answers |
 | `kagrenacCancelOnInterrupt` | true | a new line cancels the reply still being written |
 | `voiceEnabled`, `voiceVillagers`, `voiceVolume`, `voiceRange` | false, true, 1.0, 24 | voice: `voiceEnabled` on the server fetches and streams it; the others are per player |
+| `mcaLinesUseToiVoice` | true | when voice is on, MCA's own scripted villager lines use this mod's PocketTTS voice instead of MCA's TTS |
 | `voicePlay` | true | per player: `false` mutes NPC voices on your own game |
 | `kagrenacFallback` | `line` | while Kagrenac is unreachable: `line`, `none`, `openai` or `mock` |
 | `kagrenacEventQueueSize` | 200 | events kept while Kagrenac is unreachable |

@@ -91,7 +91,14 @@ public class DialogueScreen extends Screen {
     }
 
     @Override
+    public boolean charTyped(char c, int mods) {
+        if (DialogueClient.suppressTalkChar()) return true;
+        return super.charTyped(c, mods);
+    }
+
+    @Override
     public boolean keyPressed(int key, int scan, int mods) {
+        if (DialogueClient.suppressTalkChar() && DialogueClient.TALK.matches(key, scan)) return true;
         if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
             send();
             return true;
@@ -154,6 +161,12 @@ public class DialogueScreen extends Screen {
         String status = SttClient.statusLine();
         if (status != null) g.drawString(font, status, panelX, height - 40, SttClient.statusColor(), true);
         super.render(g, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public void onClose() {
+        DialogueClient.userClosedDialogue();
+        super.onClose();
     }
 
     @Override
