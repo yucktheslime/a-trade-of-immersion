@@ -20,8 +20,9 @@ import org.joml.Quaternionf;
 
 
 /**
- * Lower-torso shaping, parented to the posed torso. Static (no physics,
- * jiggle, or motion).
+ * Lower-torso shaping, parented to the posed torso. The hip flare is static;
+ * from TOI 0.6.0 the rear seat shell jiggles ({@link BodyPhysics}) as a small
+ * offset and tilt about its lower-back line, never a size change.
  *
  * <p>0.6.0: geometry is ported from the v2 Blockbench NPC_Base model
  * (model_v2.py), mapped into MCA model space (y down from the shoulders):
@@ -104,7 +105,8 @@ public final class SeatRenderer {
                 4.0f * model.body.xScale, 2.0f * model.body.zScale, -2.0f * model.body.zScale,
                 hipExtra,
                 Math.abs(model.leftLeg.x), 2.0f * model.leftLeg.xScale, 2.0f * model.leftLeg.zScale,
-                depthPx, entity
+                depthPx, entity,
+                seat ? BodyPhysics.seat(entity, shape) : BodyPhysics.Offset.NONE
         ));
     }
 
@@ -155,15 +157,36 @@ public final class SeatRenderer {
         matrices.pushPose();
         applyBodyPoseWithoutScale(model.body, matrices);
         PoseStack.Pose pose = matrices.last();
-        draw(state, pose, vertices, light, overlay, color, layer, inflate, fit);
+        // The seat shell gets its own jiggled pose; the hip ring stays on the torso pose.
+        matrices.pushPose();
+        applyJiggle(state, matrices);
+        PoseStack.Pose seatPose = matrices.last();
+        draw(state, pose, seatPose, vertices, light, overlay, color, layer, inflate, fit);
         if (!armorModel && LoftMesh.jacketPass(model, clothingLayer) && fit.jacket()) {
-            draw(state, pose, vertices, light, overlay, color, UvLayer.JACKET, inflate + JACKET_EXTRA, fit);
+            draw(state, pose, seatPose, vertices, light, overlay, color, UvLayer.JACKET, inflate + JACKET_EXTRA, fit);
         }
+        matrices.popPose();
         matrices.popPose();
     }
 
+    /** Top of the seat profile (lower back), where the shell is flush with the torso. */
+    private static final float SEAT_PIVOT_Y = 6.4f;
+
+    /** Offsets and tilts the seat shell about its lower-back line (model pixels / degrees). */
+    private static void applyJiggle(State st, PoseStack matrices) {
+        BodyPhysics.Offset o = st.jiggle;
+        if (o == null || o.isNone()) {
+            return;
+        }
+        float px = 1.0f / 16.0f;
+        matrices.translate(o.x() * px, (SEAT_PIVOT_Y + o.y()) * px, st.torsoBack * px);
+        matrices.mulPose(new Quaternionf().rotationZYX(
+                o.roll() * Mth.DEG_TO_RAD, 0.0f, o.pitch() * Mth.DEG_TO_RAD));
+        matrices.translate(0.0f, -SEAT_PIVOT_Y * px, -st.torsoBack * px);
+    }
+
     private static void draw(
-            State st, PoseStack.Pose pose, VertexConsumer vc,
+            State st, PoseStack.Pose pose, PoseStack.Pose seatPose, VertexConsumer vc,
             int light, int overlay, int color,
             UvLayer layer, float inf, ClothingSeatFit.Info fit
     ) {
@@ -198,7 +221,7 @@ public final class SeatRenderer {
             drawHips(st, pose, vc, light, overlay, color, texH, inf, uv);
         }
         if (st.seat) {
-            drawSeat(st, pose, vc, light, overlay, color, texH, inf, uv);
+            drawSeat(st, seatPose, vc, light, overlay, color, texH, inf, uv);
         }
     }
 
@@ -315,12 +338,13 @@ public final class SeatRenderer {
             float legHalf,
             float legDepth,
             float depth,
-            LivingEntity entity
+            LivingEntity entity,
+            BodyPhysics.Offset jiggle
     ) {
         private static final State HIDDEN = new State(
                 false, false, false,
                 4.0f, 2.0f, -2.0f, 0.0f,
                 1.9f, 2.0f, 2.0f, 0.0f,
-                null);
+                null, BodyPhysics.Offset.NONE);
     }
 }

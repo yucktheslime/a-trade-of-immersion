@@ -43,6 +43,14 @@ sliders in a Shape tab of MCA's villager editor, `/mcabody`, clothed body meshes
 and the pregnancy belly, which grows with this mod's pregnancy phases. Its saved data and config keep working; remove
 any separate `mca-body-shapes` jar from `mods/`.
 
+**Bust and seat physics** (from 0.6.0, NeoForge). The bust and seat meshes have their own spring-damper jiggle,
+client-side and per figure: jumps and landings, falls, walking and sprinting bob, and turning sway, smoothed between
+ticks. It only moves and tilts the existing mesh slightly. Sizes and caps are unchanged (Bust Size max 2.0, seat max
+3.0, bust depth cap 1.95 px). It applies only where the shapes apply: explicitly adult, explicitly female figures.
+Settings are in `config/mcabodyshapes-client.toml`, section `[physics]`: `bodyPhysics` (default `true`),
+`bustPhysicsIntensity` and `seatPhysicsIntensity` (0 to 2, default 1; 0 turns that part off). With MCA: Female Gender
+Physics (`mcabp`) installed, the bust is left to that mod, as before, and only the seat uses this physics.
+
 The Fabric build (`a-trade-of-immersion-fabric-0.3.9.jar`) compiles from the same code, but it is less tested. On Fabric you still need [Fabric API](https://modrinth.com/mod/fabric-api) and the Fabric MCA build. Architectury API is bundled there too; Fabric API is not, because MCA Reborn and Architectury both require it and nearly every Fabric player already has it.
 
 ## Setting up the AI

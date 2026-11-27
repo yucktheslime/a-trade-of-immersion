@@ -36,13 +36,15 @@
   "gui.mcabodyshapes.physics_on": "Seat physics: On",
   "gui.mcabodyshapes.physics_off": "Seat physics: Off",
   "gui.mcabodyshapes.physics_intensity": "Bounce",
-  "mcabodyshapes.config.physics_enabled": "Seat physics",
-  "mcabodyshapes.config.physics_intensity": "Seat physics intensity",
   "mcabodyshapes.config.default_curves": "Default curves",
   "mcabodyshapes.config.default_thighs": "Default thighs",
   "gui.mcabodyshapes.preset": "Preset",
   "gui.mcabodyshapes.preset_named": "Preset: %s",
   "gui.mcabodyshapes.slider.bust.flat": "Bust Size: Vanilla",
   "gui.mcabodyshapes.slider.bust.max": "Bust Size: Max",
-  "gui.mcabodyshapes.slider.bust.value": "Bust Size: %s"
+  "gui.mcabodyshapes.slider.bust.value": "Bust Size: %s",
+  "mcabodyshapes.config.physics": "Body physics",
+  "mcabodyshapes.config.body_physics": "Body physics",
+  "mcabodyshapes.config.bust_physics_intensity": "Bust physics intensity",
+  "mcabodyshapes.config.seat_physics_intensity": "Seat physics intensity"
 }

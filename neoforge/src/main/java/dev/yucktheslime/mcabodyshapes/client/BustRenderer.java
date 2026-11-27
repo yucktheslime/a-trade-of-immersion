@@ -20,7 +20,9 @@ import static dev.yucktheslime.mcabodyshapes.client.ProfileMesh.v;
 
 /**
  * Draws the clothed <b>Bust Size</b> protrusion on adult female figures,
- * parented to the posed torso. Static (no physics, jiggle, or motion).
+ * parented to the posed torso. From TOI 0.6.0 it jiggles ({@link BodyPhysics}): a small offset
+ * and tilt of the same mesh about its collar line, never a size change. With MCA: Female Gender
+ * Physics loaded the bust stays static here and that mod animates its own.
  *
  * <p>0.6.0: geometry is the v2 Blockbench NPC_Base chest: two mirrored,
  * angled chest blocks just below the shoulders, lofted from the same
@@ -67,7 +69,7 @@ public final class BustRenderer {
         }
         float torsoHalf = 4.0f * model.body.xScale;
         float torsoFront = -2.0f * model.body.zScale;
-        CURRENT.set(new State(true, torsoHalf, torsoFront, depth, entity));
+        CURRENT.set(new State(true, torsoHalf, torsoFront, depth, entity, BodyPhysics.bust(entity, shape)));
     }
 
     public static void render(
@@ -110,6 +112,7 @@ public final class BustRenderer {
 
         matrices.pushPose();
         applyBodyPoseWithoutScale(model.body, matrices);
+        applyJiggle(state, matrices);
         PoseStack.Pose pose = matrices.last();
         draw(state, pose, vertices, light, overlay, color, layer, inflate);
         if (!armorModel && LoftMesh.jacketPass(model, clothingLayer) && fit.jacket()) {
@@ -194,13 +197,30 @@ public final class BustRenderer {
         }
     }
 
+    /** Collar line of the chest profile (first ring), where the mesh is flush with the torso. */
+    private static final float PIVOT_Y = 0.10f;
+
+    /** Offsets and tilts the whole bust mesh about its collar line (model pixels / degrees). */
+    private static void applyJiggle(State st, PoseStack matrices) {
+        BodyPhysics.Offset o = st.jiggle;
+        if (o == null || o.isNone()) {
+            return;
+        }
+        float px = 1.0f / 16.0f;
+        matrices.translate(o.x() * px, (PIVOT_Y + o.y()) * px, st.torsoFront * px);
+        matrices.mulPose(new Quaternionf().rotationZYX(
+                o.roll() * Mth.DEG_TO_RAD, 0.0f, o.pitch() * Mth.DEG_TO_RAD));
+        matrices.translate(0.0f, -PIVOT_Y * px, -st.torsoFront * px);
+    }
+
     private record State(
             boolean visible,
             float torsoHalf,
             float torsoFront,
             float depth,
-            LivingEntity entity
+            LivingEntity entity,
+            BodyPhysics.Offset jiggle
     ) {
-        private static final State HIDDEN = new State(false, 4.0f, -2.0f, 0.0f, null);
+        private static final State HIDDEN = new State(false, 4.0f, -2.0f, 0.0f, null, BodyPhysics.Offset.NONE);
     }
 }

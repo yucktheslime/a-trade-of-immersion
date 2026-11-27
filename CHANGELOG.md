@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.6.0 (2026-11-27): Bust and seat physics for body shapes
+- **Bust and seat jiggle (NeoForge, MCA Body Shapes).** The body-shape bust and seat meshes now have their own
+  spring-damper physics, built for this mesh rather than borrowed from MCA: Female Gender Physics. It is client-side
+  and per entity, with a separate spring for the bust and the seat. It reacts to vertical movement (a kick on jumps
+  and landings), walk/sprint bob, and body-turn sway, and is interpolated between ticks. Riding, sitting and sleeping
+  damp it down. Each frame it is applied only as a small offset and tilt of the existing mesh about its attachment
+  line (bust up to 0.6 px, seat up to 0.5 px, plus a few degrees). No size or cap changes: Bust Size 2.0, seat 3.0
+  and the 1.95 px bust depth cap are as before.
+- Same gate as the shapes: explicitly adult (`BodyShapeAge.isShapeableAdult`) and explicitly female only.
+- **Config** (`config/mcabodyshapes-client.toml`, new `[physics]` section): `bodyPhysics` (default true),
+  `bustPhysicsIntensity` and `seatPhysicsIntensity` (0 to 2, default 1). The unused 0.5.x `seatPhysicsEnabled` /
+  `seatPhysicsIntensity` top-level keys are gone, so their old off / 0 values don't carry over.
+- **With MCA: Female Gender Physics (`mcabp`)** the bust is left to that mod exactly as before: no bust jiggle from
+  this mod, and the breast gene write is unchanged. The seat still gets this mod's physics.
+- Physics state is held per entity in a weak map and dropped when the client level changes. The spring math
+  (`JiggleSpring`, common code) has unit tests for settling, bounds, intensity 0 and tick interpolation. The old
+  unused `SeatPhysics` / `SeatPhysicsManager` classes were removed. Fabric gets the shared code but still has no
+  body shapes.
+
 ## 0.5.1 (2026-11-26): Talk (AI) box no longer closes instantly
 - **Talk (AI) box.** Clicking **Talk (AI)** (or pressing V) on MCA's interaction screen no longer closes the
   talk field immediately. MCA's `InteractScreen.onClose` tells the server the interaction ended, and the server
