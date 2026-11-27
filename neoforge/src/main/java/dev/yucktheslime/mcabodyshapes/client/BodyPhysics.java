@@ -3,11 +3,12 @@ package dev.yucktheslime.mcabodyshapes.client;
 import dev.yucktheslime.mcabodyshapes.McaBodyShapes;
 import dev.yucktheslime.mcabodyshapes.body.BodyShape;
 import dev.yucktheslime.mcabodyshapes.body.BodyShapeAge;
+import dev.yucktheslime.mcabodyshapes.body.BustModels;
 import dev.yucktheslime.mcabodyshapes.compat.McaPhysicsCompat;
 import dev.yucktheslime.mcabodyshapes.config.BodyShapeClientConfig;
 import dev.yucktheslime.tradeofimmersion.body.physics.JiggleSpring;
 import dev.yucktheslime.tradeofimmersion.body.physics.MotionSample;
-import dev.yucktheslime.tradeofimmersion.body.physics.PhysicsGating;
+import dev.yucktheslime.tradeofimmersion.body.physics.PhysicsRules;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
@@ -25,11 +26,10 @@ import java.util.WeakHashMap;
  * and tilt of the existing mesh; sizes and caps are never touched.
  *
  * <p>Gating is the same as the shapes themselves: only {@link BodyShapeAge#isShapeableAdult} entities
- * that are explicitly female ({@link SeatRenderer#isFemale}). This layer always drives the TOI
- * {@link BustRenderer} mesh, including when MCA: Female Gender Physics ({@code mcabp}) is loaded
- * (the breast gene is kept at 0 so mcabp does not draw a second bust). mcabp's bounce multiplier
- * and master physics toggle are honored when they can be read; a failed reflection never disables
- * the jiggle. The seat always uses this physics.
+ * that are explicitly female ({@link SeatRenderer#isFemale}). The bust jiggle drives the TOI
+ * {@link BustRenderer} mesh of entities whose bust model is {@code toi}; entities whose model is
+ * {@code mcabp} (see {@link BustModels#clientUsesMcabp}) have no TOI bust mesh here and mcabp jiggles its
+ * own. The seat always uses this physics.
  *
  * <p>Motion is sampled from the last stepped pose ({@link MotionSample}), not only from
  * {@code entity.yo}, so interpolated MCA villagers, TOI companions and other players still
@@ -73,27 +73,21 @@ public final class BodyPhysics {
         return BodyShapeAge.isShapeableAdult(entity) && SeatRenderer.isFemale(entity);
     }
 
-    /** Bust jiggle for this frame; {@link Offset#NONE} when off or not eligible. */
+    /** Bust jiggle for this frame; {@link Offset#NONE} when off, not eligible, or the entity uses mcabp's bust. */
     public static Offset bust(LivingEntity entity, BodyShape shape) {
         logOnce();
-        if (!PhysicsGating.toiDrivesBust(
-                BodyShapeClientConfig.physicsEnabled(),
-                McaPhysicsCompat.isLoaded(),
-                McaPhysicsCompat.physicsEnabledOrNull())) {
+        if (!PhysicsRules.toiDrivesBust(BustModels.stored(entity), McaPhysicsCompat.isLoaded(),
+                McaPhysicsCompat.renderingEnabledOrNull(), entity instanceof net.minecraft.world.entity.player.Player)) {
             return Offset.NONE;
         }
-        float size = (float) Math.sqrt(Mth.clamp(shape.bust() / BodyShape.MAX, 0.0f, 1.0f));
-        float intensity = PhysicsGating.bustIntensity(
-                BodyShapeClientConfig.bustIntensity(),
-                McaPhysicsCompat.isLoaded(),
-                McaPhysicsCompat.effectiveBounceScale());
-        return compute(entity, true, size, intensity);
+        float size = PhysicsRules.bustSize(shape.bust());
+        return compute(entity, true, size, BodyShapeClientConfig.bustIntensity());
     }
 
     /** Seat jiggle for this frame (runs with or without mcabp). */
     public static Offset seat(LivingEntity entity, BodyShape shape) {
         logOnce();
-        float size = (float) Math.sqrt(Mth.clamp(shape.seat() / BodyShape.SEAT_MAX, 0.0f, 1.0f));
+        float size = PhysicsRules.seatSize(shape.seat());
         return compute(entity, false, size, BodyShapeClientConfig.seatIntensity());
     }
 
@@ -153,20 +147,14 @@ public final class BodyPhysics {
             return;
         }
         logged = true;
-        boolean toiOn = BodyShapeClientConfig.physicsEnabled();
-        boolean mcabp = McaPhysicsCompat.isLoaded();
-        Boolean toggle = McaPhysicsCompat.physicsEnabledOrNull();
-        float bounce = McaPhysicsCompat.effectiveBounceScale();
         McaBodyShapes.LOGGER.info(
-                "Body physics: enabled={}, bustIntensity={}, effectiveBustIntensity={}, seatIntensity={}, mcabp={}, mcabpPhysics={}, bounceScale={}, toiDrivesBust={}. Run /mcabody physics in game for a status readout.",
-                toiOn,
+                "Body physics: enabled={}, bustIntensity={}, seatIntensity={}, mcabp={}, mcabpPhysics={}, mcabpRendering={}. Run /mcabody physics in game for a status readout.",
+                BodyShapeClientConfig.physicsEnabled(),
                 BodyShapeClientConfig.bustIntensity(),
-                PhysicsGating.bustIntensity(BodyShapeClientConfig.bustIntensity(), mcabp, bounce),
                 BodyShapeClientConfig.seatIntensity(),
-                mcabp,
-                toggle == null ? (mcabp ? "unread (treated as on)" : "n/a") : toggle,
-                bounce,
-                PhysicsGating.toiDrivesBust(toiOn, mcabp, toggle));
+                McaPhysicsCompat.isLoaded(),
+                McaPhysicsCompat.physicsEnabledOrNull(),
+                McaPhysicsCompat.renderingEnabledOrNull());
     }
 
     /** Drops all state (also happens automatically on a level change). */

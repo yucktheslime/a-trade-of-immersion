@@ -114,7 +114,7 @@ versionRange = "*"
 ordering = "AFTER"
 side = "BOTH"
 
-# MCA: Female Gender Physics, optional: breast gene stays at 0 (no double bust); TOI still jiggles its own bust mesh.
+# MCA: Female Gender Physics, optional: each female NPC is rolled once between its bust and TOI's own (boobs config); never both.
 [[dependencies.mcabodyshapes]]
 modId = "mcabp"
 type = "optional"

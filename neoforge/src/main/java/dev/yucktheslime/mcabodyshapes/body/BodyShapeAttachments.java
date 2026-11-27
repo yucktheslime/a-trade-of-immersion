@@ -1,6 +1,7 @@
 package dev.yucktheslime.mcabodyshapes.body;
 
 import com.mojang.serialization.Codec;
+import net.minecraft.network.codec.ByteBufCodecs;
 import dev.yucktheslime.mcabodyshapes.McaBodyShapes;
 import java.util.function.Supplier;
 import net.neoforged.neoforge.attachment.AttachmentType;
@@ -33,6 +34,20 @@ public final class BodyShapeAttachments {
             "body_shape_assigned",
             () -> AttachmentType.builder(() -> Boolean.FALSE)
                     .serialize(Codec.BOOL)
+                    .copyOnDeath()
+                    .build()
+    );
+
+    /**
+     * Which bust model a female NPC draws: {@code toi} (this mod's mesh) or {@code mcabp} (MCA: Female Gender
+     * Physics). Rolled once on the server ({@link BustModels#ensure}), saved with the entity, copied on death
+     * and synced to clients. Absent until rolled, so read it with {@code getExistingData}.
+     */
+    public static final Supplier<AttachmentType<String>> BUST_MODEL = ATTACHMENT_TYPES.register(
+            "bust_model",
+            () -> AttachmentType.builder(() -> "")
+                    .serialize(Codec.STRING)
+                    .sync(ByteBufCodecs.STRING_UTF8)
                     .copyOnDeath()
                     .build()
     );

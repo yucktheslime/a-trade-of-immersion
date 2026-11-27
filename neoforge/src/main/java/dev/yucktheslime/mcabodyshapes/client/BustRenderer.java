@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.yucktheslime.mcabodyshapes.body.BodyShape;
 import dev.yucktheslime.mcabodyshapes.body.BodyShapeAge;
+import dev.yucktheslime.mcabodyshapes.body.BustModels;
 import net.conczin.mca.client.model.PlayerArmorExtendedModel;
 import net.conczin.mca.client.model.VillagerEntityBaseModelMCA;
 import net.conczin.mca.client.model.VillagerEntityModelMCA;
@@ -21,8 +22,8 @@ import static dev.yucktheslime.mcabodyshapes.client.ProfileMesh.v;
 /**
  * Draws the clothed <b>Bust Size</b> protrusion on adult female figures,
  * parented to the posed torso. From TOI 0.6.0 it jiggles ({@link BodyPhysics}): a small offset
- * and tilt of the same mesh about its collar line, never a size change. This still runs when
- * MCA: Female Gender Physics is loaded (its breast gene is kept at 0 so there is no second bust).
+ * and tilt of the same mesh about its collar line, never a size change. It draws only for entities whose
+ * bust model is {@code toi}; entities that use MCA: Female Gender Physics' bust ({@link BustModels}) skip it.
  *
  * <p>0.6.0: geometry is the v2 Blockbench NPC_Base chest: two mirrored,
  * angled chest blocks just below the shoulders, lofted from the same
@@ -57,7 +58,9 @@ public final class BustRenderer {
     public static void prepare(LivingEntity entity, BodyShape shape, HumanoidModel<?> model) {
         if (!BodyShapeAge.isShapeableAdult(entity)
                 || !model.body.visible
-                || !SeatRenderer.isFemale(entity)) {
+                || !SeatRenderer.isFemale(entity)
+                || BustModels.clientUsesMcabp(entity)) {
+            // 0.6.2: an entity whose bust model is mcabp gets mcabp's bust only, never this mesh as well.
             CURRENT.set(State.HIDDEN);
             return;
         }

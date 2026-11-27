@@ -42,6 +42,9 @@ public final class McaBodyShapes {
             // A Trade of Immersion's own simple belly steps aside wherever this mod's belly mesh draws it.
             BellyVisual.drawnElsewhere = BodyShapeAge::isShapeableAdult;
             NeoForge.EVENT_BUS.addListener(dev.yucktheslime.mcabodyshapes.client.BodyPhysicsCommands::register);
+            // A companion's client-side MCA record is what mcabp draws: give it the Breast gene of its bust model.
+            dev.yucktheslime.tradeofimmersion.client.CompanionBodyClient.breastGeneOverride =
+                    dev.yucktheslime.mcabodyshapes.body.BustModels::companionGene;
         }
 
         // Dev screenshot runner: never shipped (excluded from every jar); only present in a local dev tree.

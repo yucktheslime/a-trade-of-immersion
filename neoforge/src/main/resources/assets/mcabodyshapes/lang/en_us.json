@@ -1,7 +1,7 @@
 {
-  "commands.mcabodyshapes.physics": "Body physics: %s. Bust intensity %.2f (effective %.2f), seat intensity %.2f. mcabp: %s, mcabp physics: %s, bounce scale %.2f. TOI drives the bust mesh: %s. Breast gene write: %s. Physics is client-side: every player needs this TOI jar.",
-  "commands.mcabodyshapes.physics_target": "Target %s: eligible %s, bust %.2f, seat %.2f. Jump or walk to see the jiggle.",
-  "commands.mcabodyshapes.get": "Body shape for %s: bust %.2f, hips %.2f, seat %.2f, waist %.2f, weight %.2f, muscle %.2f, shoulders %.2f, chest %.2f, gut %.2f, height %.2f, curves %.2f, thighs %.2f (pregnancy %.0f%%)",
+  "commands.mcabodyshapes.physics": "Body physics: %s. Bust intensity %.2f, seat intensity %.2f. mcabp: %s (physics %s, rendering %s). Physics is client-side: every player needs this TOI jar.",
+  "commands.mcabodyshapes.physics_target": "Target %s: eligible %s, bust model %s (draws: %s), bust %.2f, seat %.2f. TOI bust jiggle: %s, TOI seat jiggle: %s.",
+  "commands.mcabodyshapes.get": "Body shape for %s: bust %.2f, hips %.2f, seat %.2f, waist %.2f, weight %.2f, muscle %.2f, shoulders %.2f, chest %.2f, gut %.2f, height %.2f, curves %.2f, thighs %.2f (pregnancy %.0f%%), boobs %s",
   "commands.mcabodyshapes.set": "Set %s %s to %.2f",
   "commands.mcabodyshapes.preset": "Applied preset '%s' to %s",
   "commands.mcabodyshapes.reset": "Reset body shape for %s to defaults",
@@ -48,5 +48,12 @@
   "mcabodyshapes.config.physics": "Body physics",
   "mcabodyshapes.config.body_physics": "Body physics",
   "mcabodyshapes.config.bust_physics_intensity": "Bust physics intensity",
-  "mcabodyshapes.config.seat_physics_intensity": "Seat physics intensity"
+  "mcabodyshapes.config.seat_physics_intensity": "Seat physics intensity",
+  "commands.mcabodyshapes.boobs": "Set the bust model of %s to %s (boobs config: %s)",
+  "commands.mcabodyshapes.boobs_forced": "Set the bust model of %s to %s, but the boobs config forces '%s' for everyone, so it will be set back. Change boobs in mcabodyshapes-common.toml.",
+  "commands.mcabodyshapes.boobs_npc_only": "Only female MCA villagers and adult female companions have a bust model. Players always use the TOI bust.",
+  "argument.mcabodyshapes.boobs.invalid": "Unknown bust model '%s'. Use toi, mcabp or reroll",
+  "mcabodyshapes.config.boobs": "Bust model",
+  "mcabodyshapes.config.boobs_mcabp_chance": "mcabp bust chance",
+  "commands.mcabodyshapes.physics_mcabp": "mcabp sees this one as: supported %s, gender %s, bust size %.2f, physics offset y %.3f x %.3f (changes when it moves)."
 }

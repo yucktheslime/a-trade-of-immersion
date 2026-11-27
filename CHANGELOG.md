@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.6.2 (2026-11-27): each female NPC gets one bust model, TOI's or mcabp's, and both jiggle
+- **One bust model per female NPC.** The first time a female NPC is seen (a new spawn, or an existing NPC the first
+  time it loads) it is rolled once between **`toi`** (this mod's Body Shapes bust and its own jiggle) and **`mcabp`**
+  (MCA: Female Gender Physics' bust and physics). The choice is saved with the NPC, synced to clients and kept across
+  reloads (`mcabodyshapes:bust_model`). Exactly one bust is ever drawn. This covers MCA villagers and explicitly
+  female adult companions; players always use the TOI bust. The seat, hips, thighs and every other slider stay TOI's
+  for both, and **the TOI seat jiggle runs for every NPC whichever bust it rolled**.
+- **toi:** unchanged from 0.6.1: TOI's mesh and `BodyPhysics` jiggle, breast gene 0 so mcabp draws nothing.
+- **mcabp:** TOI's bust mesh is hidden for that NPC and MCA's breast gene carries Bust Size (slider 0-2 mapped onto
+  the 0-1 gene), so mcabp draws and jiggles it. mcabp already ticks MCA villagers; for TOI companions it is driven
+  through their client-side MCA record, whose Breast gene now follows the model (an explicit `/toi body breast` edit
+  still wins). A client without mcabp, or with mcabp's `renderingEnabled` off, shows the TOI bust instead; with mcabp
+  not installed everyone gets the toi look.
+- **Config** (`config/mcabodyshapes-common.toml`, read by the server): `boobs` = `random` (default), `toi` or `mcabp`
+  (a forced value applies to everyone, replacing the stored choice) and `boobsMcabpChance` (0 to 1, default 0.5) for
+  the random roll.
+- **Commands:** `/mcabody boobs <target> toi|mcabp|reroll` (op; villagers and companions) and `/mcabody get` now ends
+  with `boobs <model>`. `/mcabody physics` (client) also shows the looked-at NPC's bust model, which jiggles run
+  (TOI bust, TOI seat), and what mcabp itself holds for it (supported, gender, bust size, live physics offset).
+- Removed 0.6.1's coupling of the TOI bust to mcabp's bounce multiplier and master toggle: with the per-entity choice
+  an NPC on the toi model jiggles by this mod's own `[physics]` config only.
+- Tests: `BustModelRules` (roll, chance, forcing, stored choice kept, client resolution, gene mapping) and
+  `PhysicsRules` (the toi bust jiggle and the seat jiggle stay on for every model, config still switches each off).
+  Tried on a dedicated NeoForge server: female villagers roll toi/mcabp, toi writes gene 0, mcabp writes the bust
+  gene, males are untouched, and the value is saved in the entity data.
+
 ## 0.6.1 (2026-11-27): Bust physics works when MCA Female Gender Physics is installed
 - **Bust jiggle with mcabp.** 0.6.0 left the bust to MCA: Female Gender Physics when that mod (`mcabp`)
   was loaded, but this mod also writes MCA's breast gene to 0 in that case (so the two bust meshes do

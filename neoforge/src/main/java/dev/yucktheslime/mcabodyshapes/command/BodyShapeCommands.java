@@ -12,6 +12,10 @@ import dev.yucktheslime.mcabodyshapes.body.BodyShape;
 import dev.yucktheslime.mcabodyshapes.body.BodyShapeLimits;
 import dev.yucktheslime.mcabodyshapes.body.BodyShapeAge;
 import dev.yucktheslime.mcabodyshapes.body.BodyShapeWrites;
+import dev.yucktheslime.mcabodyshapes.body.BustModels;
+import dev.yucktheslime.mcabodyshapes.config.BodyShapeCommonConfig;
+import dev.yucktheslime.tradeofimmersion.body.BustModelRules;
+import net.minecraft.world.entity.player.Player;
 import dev.yucktheslime.mcabodyshapes.body.BodyShapePresets;
 import dev.yucktheslime.mcabodyshapes.body.PregnancyProgress;
 import dev.yucktheslime.mcabodyshapes.body.PregnancyWrites;
@@ -34,6 +38,9 @@ public final class BodyShapeCommands {
     private static final DynamicCommandExceptionType UNKNOWN_CHANNEL = new DynamicCommandExceptionType(
             value -> Component.translatable("argument.mcabodyshapes.channel.invalid", value)
     );
+    private static final DynamicCommandExceptionType UNKNOWN_BOOBS = new DynamicCommandExceptionType(
+            value -> Component.translatable("argument.mcabodyshapes.boobs.invalid", value)
+    );
     private static final DynamicCommandExceptionType UNKNOWN_PRESET = new DynamicCommandExceptionType(
             value -> Component.translatable("argument.mcabodyshapes.preset.invalid", value)
     );
@@ -48,6 +55,11 @@ public final class BodyShapeCommands {
                             .distinct(),
                     builder
             );
+    private static final SimpleCommandExceptionType BOOBS_NPC_ONLY = new SimpleCommandExceptionType(
+            Component.translatable("commands.mcabodyshapes.boobs_npc_only")
+    );
+    private static final SuggestionProvider<CommandSourceStack> BOOBS_SUGGESTIONS = (ctx, builder) ->
+            SharedSuggestionProvider.suggest(java.util.stream.Stream.of("toi", "mcabp", "reroll"), builder);
     private static final SuggestionProvider<CommandSourceStack> PRESET_SUGGESTIONS = (ctx, builder) ->
             SharedSuggestionProvider.suggest(BodyShapePresets.ids(), builder);
 
@@ -67,6 +79,11 @@ public final class BodyShapeCommands {
                                         .suggests(CHANNEL_SUGGESTIONS)
                                         .then(Commands.argument("value", FloatArgumentType.floatArg(BodyShape.MIN, BodyShape.SEAT_MAX))
                                                 .executes(BodyShapeCommands::set)))))
+                .then(Commands.literal("boobs")
+                        .then(Commands.argument("target", EntityArgument.entity())
+                                .then(Commands.argument("model", StringArgumentType.word())
+                                        .suggests(BOOBS_SUGGESTIONS)
+                                        .executes(BodyShapeCommands::boobs))))
                 .then(Commands.literal("preset")
                         .then(Commands.argument("target", EntityArgument.entity())
                                 .then(Commands.argument("preset", StringArgumentType.word())
@@ -91,7 +108,8 @@ public final class BodyShapeCommands {
                 shape.bust(), shape.hips(), shape.seat(), shape.waist(), shape.weight(),
                 shape.muscle(), shape.shoulders(), shape.chest(), shape.gut(), shape.height(),
                 shape.curves(), shape.thighs(),
-                pregnancy
+                pregnancy,
+                BustModels.describe(target)
         ), false);
         return 1;
     }
@@ -113,6 +131,34 @@ public final class BodyShapeCommands {
                 target.getName(),
                 channel.key(),
                 updated.get(channel)
+        ), true);
+        return 1;
+    }
+
+    private static int boobs(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        LivingEntity target = living(ctx);
+        requireAdult(target);
+        if (target instanceof Player || !BustModels.isFemaleNpc(target)) {
+            throw BOOBS_NPC_ONLY.create();
+        }
+        String arg = StringArgumentType.getString(ctx, "model").toLowerCase(java.util.Locale.ROOT);
+        String model;
+        if (arg.equals("reroll")) {
+            model = BustModels.reroll(target);
+        } else {
+            model = BustModelRules.parseModel(arg);
+            if (model == null) {
+                throw UNKNOWN_BOOBS.create(arg);
+            }
+            BustModels.set(target, model);
+        }
+        BodyShapeWrites.syncBust(target, BodyShape.get(target));
+        String mode = BodyShapeCommonConfig.boobsMode();
+        String finalModel = model;
+        boolean forced = !mode.equals(BustModelRules.RANDOM);
+        ctx.getSource().sendSuccess(() -> Component.translatable(
+                forced ? "commands.mcabodyshapes.boobs_forced" : "commands.mcabodyshapes.boobs",
+                target.getName(), finalModel, mode
         ), true);
         return 1;
     }

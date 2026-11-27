@@ -22,6 +22,8 @@ public final class BodyShapeCommonConfig {
     public static final ModConfigSpec.DoubleValue DEFAULT_CURVES;
     public static final ModConfigSpec.DoubleValue DEFAULT_THIGHS;
     public static final ModConfigSpec.DoubleValue MAX_BELLY_DEPTH;
+    public static final ModConfigSpec.ConfigValue<String> BOOBS;
+    public static final ModConfigSpec.DoubleValue BOOBS_MCABP_CHANCE;
     /** Hard cap of the pregnancy belly's peak depth, in model pixels (phase 3). */
     public static final double BELLY_DEPTH_HARD_MAX = 2.5d;
 
@@ -62,6 +64,22 @@ public final class BodyShapeCommonConfig {
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        BOOBS = builder
+                .comment("Which bust model female NPCs (MCA villagers and A Trade of Immersion companions) draw. Exactly one is drawn.",
+                        "random = each NPC is rolled once, the first time it is seen, and keeps it (see boobsMcabpChance).",
+                        "toi    = everyone uses this mod's Body Shapes bust (and jiggle).",
+                        "mcabp  = everyone uses MCA: Female Gender Physics' bust (and jiggle); needs it installed on the player's client,",
+                        "         otherwise that player sees the TOI bust instead.",
+                        "Players always use the toi bust. A forced value also replaces what /mcabody boobs set.")
+                .translation("mcabodyshapes.config.boobs")
+                // A validator, not defineInList: List.of(...).contains(null) throws when the key is missing from an older config file.
+                .define("boobs", "random", o -> o instanceof String s
+                        && (s.equalsIgnoreCase("random") || s.equalsIgnoreCase("toi") || s.equalsIgnoreCase("mcabp")));
+        BOOBS_MCABP_CHANCE = builder
+                .comment("With boobs = random: chance (0..1) that a newly rolled female NPC gets the mcabp bust. 0.5 is an even split.")
+                .translation("mcabodyshapes.config.boobs_mcabp_chance")
+                .defineInRange("boobsMcabpChance", 0.5d, 0.0d, 1.0d);
+
         DEFAULT_CURVES = builder
                 .comment("Default Curves slider (0–2) used by Reset. Curves shapes the side profile of the hips: 0 is a straighter slope, 2 is rounder.")
                 .translation("mcabodyshapes.config.default_curves")
@@ -110,6 +128,24 @@ public final class BodyShapeCommonConfig {
     }
 
     private BodyShapeCommonConfig() {
+    }
+
+    /** {@code random}, {@code toi} or {@code mcabp}; {@code random} if the config is not loaded yet. */
+    public static String boobsMode() {
+        try {
+            return dev.yucktheslime.tradeofimmersion.body.BustModelRules.parseMode(BOOBS.get());
+        } catch (IllegalStateException ignored) {
+            return dev.yucktheslime.tradeofimmersion.body.BustModelRules.RANDOM;
+        }
+    }
+
+    /** Chance (0..1) of the mcabp bust for a random roll; 0.5 if the config is not loaded yet. */
+    public static double boobsMcabpChance() {
+        try {
+            return Mth.clamp(BOOBS_MCABP_CHANCE.get(), 0.0d, 1.0d);
+        } catch (IllegalStateException ignored) {
+            return 0.5d;
+        }
     }
 
     /** Configured belly depth cap in px, always within 0..{@link #BELLY_DEPTH_HARD_MAX}. */

@@ -39,19 +39,28 @@ Use the plain jar, not `-dev-shadow` or `-sources`.
 
 **MCA Body Shapes is included** (NeoForge only, from 0.5.0). The NeoForge jar also contains MCA Body Shapes by
 yucktheslime (MIT, see [LICENSE-mca-body-shapes](LICENSE-mca-body-shapes)) as a second mod, `mcabodyshapes`: body-shape
-sliders in a Shape tab of MCA's villager editor, `/mcabody` (and `/mcabody physics` for a client physics readout), clothed body meshes for adult MCA villagers and players,
+sliders in a Shape tab of MCA's villager editor, `/mcabody` (`/mcabody boobs`, and `/mcabody physics` for a client physics readout), clothed body meshes for adult MCA villagers and players,
 and the pregnancy belly, which grows with this mod's pregnancy phases. Its saved data and config keep working; remove
 any separate `mca-body-shapes` jar from `mods/`.
 
-**Bust and seat physics** (from 0.6.0, NeoForge; bust-with-mcabp fix in 0.6.1). The bust and seat meshes have their
-own spring-damper jiggle, client-side and per figure: jumps and landings, falls, walking and sprinting bob, and
-turning sway, smoothed between ticks. It only moves and tilts the existing mesh slightly. Sizes and caps are
-unchanged (Bust Size max 2.0, seat max 3.0, bust depth cap 1.95 px). It applies only where the shapes apply:
-explicitly adult, explicitly female figures. Settings are in `config/mcabodyshapes-client.toml`, section `[physics]`:
-`bodyPhysics` (default `true`), `bustPhysicsIntensity` and `seatPhysicsIntensity` (0 to 2, default 1; 0 turns that
-part off). This still jiggles TOI's own bust mesh when MCA: Female Gender Physics (`mcabp`) is installed; that mod's
-breast gene is kept at 0 so the two busts do not stack. Run `/mcabody physics` in game for a client status readout.
-Every player needs this jar, because the physics run on the client.
+**Bust model per female NPC** (from 0.6.2). Each female NPC (MCA villager or adult female companion) is rolled once,
+the first time it is seen, between two bust models and keeps it: **`toi`** (this mod's bust mesh with its own jiggle)
+or **`mcabp`** (MCA: Female Gender Physics' bust and physics). Exactly one is drawn. The choice is saved, synced and
+kept across reloads; existing NPCs get theirs the first time they load. Players always use the TOI bust. The seat and
+all other sliders stay TOI's for both. With mcabp not installed, everyone shows the toi look.
+In `config/mcabodyshapes-common.toml` (server): `boobs` = `random` (default), `toi` or `mcabp` (forces everyone) and
+`boobsMcabpChance` (0 to 1, default 0.5, for the random roll). `/mcabody boobs <target> toi|mcabp|reroll` changes one
+NPC and `/mcabody get <target>` shows it.
+
+**Bust and seat physics** (from 0.6.0, NeoForge). The bust and seat meshes have their own spring-damper jiggle,
+client-side and per figure: jumps and landings, falls, walking and sprinting bob, and turning sway, smoothed between
+ticks. It only moves and tilts the existing mesh slightly. Sizes and caps are unchanged (Bust Size max 2.0, seat max
+3.0, bust depth cap 1.95 px). It applies only where the shapes apply: explicitly adult, explicitly female figures.
+Settings are in `config/mcabodyshapes-client.toml`, section `[physics]`: `bodyPhysics` (default `true`),
+`bustPhysicsIntensity` and `seatPhysicsIntensity` (0 to 2, default 1; 0 turns that part off). The TOI bust jiggles on
+`toi` NPCs, `mcabp` NPCs jiggle through mcabp (its own settings), and the seat jiggles on every NPC. Run
+`/mcabody physics` in game for a client status readout. Every player needs this jar, because the physics run on the
+client.
 
 The Fabric build (`a-trade-of-immersion-fabric-0.3.9.jar`) compiles from the same code, but it is less tested. On Fabric you still need [Fabric API](https://modrinth.com/mod/fabric-api) and the Fabric MCA build. Architectury API is bundled there too; Fabric API is not, because MCA Reborn and Architectury both require it and nearly every Fabric player already has it.
 

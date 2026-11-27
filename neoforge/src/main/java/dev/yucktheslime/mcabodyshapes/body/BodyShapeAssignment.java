@@ -47,7 +47,7 @@ public final class BodyShapeAssignment {
         if (BodyShapeWrites.isAssigned(entity)) {
             // Already finalized (including a player Reset to vanilla). Keep the
             // breast gene in sync in case a 0.3.0 shape never wrote it.
-            BodyShapeWrites.writeBustGene(entity, existing);
+            BodyShapeWrites.syncBust(entity, existing);
             return;
         }
 

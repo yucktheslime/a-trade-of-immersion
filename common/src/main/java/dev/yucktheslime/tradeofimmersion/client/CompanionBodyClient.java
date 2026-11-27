@@ -52,6 +52,11 @@ public final class CompanionBodyClient {
     public static Consumer<Genetics> extraDefaultGenes = g -> {
     };
     public static Function<String, Genetics.GeneType> extraGeneType = n -> null;
+    /**
+     * Set by MCA Body Shapes (NeoForge): the Breast gene a companion's record should hold, or null to leave it.
+     * Applied on every {@link #ensure} so the choice between TOI's bust and mcabp's (gene 0 vs the bust size) holds.
+     */
+    public static Function<net.minecraft.world.entity.LivingEntity, Float> breastGeneOverride = e -> null;
 
     private CompanionBodyClient() {
     }
@@ -117,6 +122,14 @@ public final class CompanionBodyClient {
             entry = create(e.level(), e.getUUID(), gender, rev);
             if (entry == null) return null;
             CACHE.put(e.getUUID(), entry);
+        }
+        try {
+            Float gene = breastGeneOverride.apply(e);
+            if (gene != null && entry.villager.getGenetics().getGene(Genetics.BREAST) != gene) {
+                entry.villager.getGenetics().setGene(Genetics.BREAST, gene);
+            }
+        } catch (Throwable t) {
+            // Never let the body-shape hook break companion rendering.
         }
         if (MCAClient.playerData.get(e.getUUID()) != entry.villager) {
             MCAClient.playerData.put(e.getUUID(), entry.villager); // re-added after MCAClient.onLogin() clears the map
