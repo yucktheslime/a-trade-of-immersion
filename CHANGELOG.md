@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0-SNAPSHOT (unreleased, branch `body-shapes-merge`): MCA Body Shapes bundled (NeoForge)
+## 0.5.0 (2026-11-26): MCA Body Shapes bundled (NeoForge), shapes for adult female companions
 - **MCA Body Shapes 0.6.2 is now part of the NeoForge jar** (by yucktheslime, MIT, previously a separate
   private mod). It ships as a second mod in the same jar with its original mod id `mcabodyshapes`
   (version 0.7.0-SNAPSHOT), so saved `mcabodyshapes:body_shape` / `body_shape_assigned` data on villagers and
