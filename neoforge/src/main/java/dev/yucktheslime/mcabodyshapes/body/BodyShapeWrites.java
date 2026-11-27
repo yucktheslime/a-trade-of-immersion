@@ -35,6 +35,8 @@ public final class BodyShapeWrites {
     /**
      * Maps our 0–2 bust slider onto MCA's 0–1 {@link Genetics#BREAST} gene
      * (slider 1.0 → gene 0.5). Male villagers keep a breast gene of 0.
+     * When mcabp is loaded the gene is written as 0 so that add-on does not
+     * draw a second bust; TOI's BustRenderer still jiggles.
      */
     public static void writeBustGene(Entity entity, BodyShape shape) {
         if (!(entity instanceof VillagerLike<?> villager)) {
@@ -47,7 +49,8 @@ public final class BodyShapeWrites {
         if (genetics.getGender() != Gender.FEMALE) {
             return;
         }
-        // Never drive third-party jiggle physics (mcabp) when loaded; BustRenderer draws static mesh.
+        // When mcabp is loaded the breast gene stays at 0 so its mesh stays flat (no double bust);
+        // TOI's BustRenderer still provides the jiggle.
         float gene = dev.yucktheslime.mcabodyshapes.compat.McaPhysicsCompat.isLoaded()
                 ? 0.0f
                 : Mth.clamp(shape.bust() * 0.5f, 0.0f, 1.0f);

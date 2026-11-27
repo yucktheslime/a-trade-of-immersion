@@ -140,6 +140,20 @@ class JiggleSpringTest {
         assertEquals(0.0f, s.y(1.0f));
     }
 
+
+    @Test
+    void walkBobProducesMotion() {
+        for (Tuning t : TUNINGS) {
+            JiggleSpring s = new JiggleSpring(t, 0.0f);
+            float peak = 0.0f;
+            for (long tick = 0; tick < 40; tick++) {
+                s.step(tick, new Input(0.0f, 1.0f, tick * 0.8f, 0.0f, false), 1.0f, 1.0f);
+                peak = Math.max(peak, Math.abs(s.y(1.0f)));
+            }
+            assertTrue(peak > 0.02f, "walk bob should move the spring, peak=" + peak + " tuning=" + t);
+        }
+    }
+
     private static float peakAfterLanding(float intensity) {
         JiggleSpring s = new JiggleSpring(Tuning.BUST, 0.0f);
         long tick = jumpAndLand(s, 0, 0.5f, intensity);

@@ -21,8 +21,8 @@ import static dev.yucktheslime.mcabodyshapes.client.ProfileMesh.v;
 /**
  * Draws the clothed <b>Bust Size</b> protrusion on adult female figures,
  * parented to the posed torso. From TOI 0.6.0 it jiggles ({@link BodyPhysics}): a small offset
- * and tilt of the same mesh about its collar line, never a size change. With MCA: Female Gender
- * Physics loaded the bust stays static here and that mod animates its own.
+ * and tilt of the same mesh about its collar line, never a size change. This still runs when
+ * MCA: Female Gender Physics is loaded (its breast gene is kept at 0 so there is no second bust).
  *
  * <p>0.6.0: geometry is the v2 Blockbench NPC_Base chest: two mirrored,
  * angled chest blocks just below the shoulders, lofted from the same

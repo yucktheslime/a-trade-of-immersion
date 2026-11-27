@@ -1,6 +1,7 @@
 package dev.yucktheslime.mcabodyshapes.compat;
 
 import dev.yucktheslime.mcabodyshapes.McaBodyShapes;
+import dev.yucktheslime.tradeofimmersion.body.physics.PhysicsGating;
 import dev.yucktheslime.mcabodyshapes.body.BodyShape;
 import net.conczin.mca.entity.ai.Genetics;
 import net.minecraft.world.entity.LivingEntity;
@@ -14,12 +15,13 @@ import net.neoforged.fml.ModList;
  * When it is loaded we:
  * <ul>
  *   <li>skip scaling MCA's built-in bust cubes, so the two meshes don't stack</li>
- *   <li>the bust slider is always written through to {@link Genetics#BREAST}
- *       (on spawn and when edited), so both this layer and MCA's built-in
- *       breasts follow the same size</li>
+ *   <li>keep {@link Genetics#BREAST} at 0 so mcabp does not draw a second bust</li>
+ *   <li>still jiggle TOI's own {@code BustRenderer} mesh ({@code BodyPhysics}),
+ *       optionally scaled by mcabp's bounce multiplier and master toggle</li>
  * </ul>
  *
  * <p>No hard or compile-time dependency: detection is {@link ModList#isLoaded}.
+ * A missing or failed config reflection never disables TOI physics.
  */
 public final class McaPhysicsCompat {
     public static final String MOD_ID = "mcabp";
@@ -32,7 +34,7 @@ public final class McaPhysicsCompat {
     public static void probe() {
         loaded = ModList.get().isLoaded(MOD_ID);
         if (loaded) {
-            McaBodyShapes.LOGGER.info("Detected MCA: Female Gender Physics ({}). Bust slider will drive MCA's breast gene and will not scale MCA's built-in bust mesh.", MOD_ID);
+            McaBodyShapes.LOGGER.info("Detected MCA: Female Gender Physics ({}). Breast gene stays at 0 so its bust stays flat; TOI's BustRenderer provides the jiggle.", MOD_ID);
         }
     }
 
@@ -54,17 +56,25 @@ public final class McaPhysicsCompat {
      * unreadable config is treated as enabled.
      */
     public static boolean effectivePhysicsEnabled() {
+        return !Boolean.FALSE.equals(physicsEnabledOrNull());
+    }
+
+    /**
+     * mcabp's master physics toggle, or {@code null} if mcabp is absent or the
+     * value could not be read. {@code null} must be treated as enabled.
+     */
+    public static Boolean physicsEnabledOrNull() {
         if (!loaded) {
-            return true;
+            return null;
         }
         try {
             Class<?> cls = Class.forName("com.mcabp.wildfire.main.config.GeneralClientConfig");
             Object instance = cls.getField("INSTANCE").get(null);
             Object value = cls.getField("physicsEnabled").get(instance);
             Object result = value.getClass().getMethod("get").invoke(value);
-            return result instanceof Boolean enabled ? enabled : true;
+            return result instanceof Boolean enabled ? enabled : null;
         } catch (Throwable ignored) {
-            return true;
+            return null;
         }
     }
 
@@ -82,7 +92,7 @@ public final class McaPhysicsCompat {
             Object value = cls.getField("bounceMultiplier").get(instance);
             Object result = value.getClass().getMethod("get").invoke(value);
             if (result instanceof Number number) {
-                return (float) (number.doubleValue() / 0.5d);
+                return PhysicsGating.bounceScale(number.doubleValue());
             }
         } catch (Throwable ignored) {
             // Standalone intensity is used as-is.

@@ -41,6 +41,7 @@ public final class McaBodyShapes {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             // A Trade of Immersion's own simple belly steps aside wherever this mod's belly mesh draws it.
             BellyVisual.drawnElsewhere = BodyShapeAge::isShapeableAdult;
+            NeoForge.EVENT_BUS.addListener(dev.yucktheslime.mcabodyshapes.client.BodyPhysicsCommands::register);
         }
 
         // Dev screenshot runner: never shipped (excluded from every jar); only present in a local dev tree.

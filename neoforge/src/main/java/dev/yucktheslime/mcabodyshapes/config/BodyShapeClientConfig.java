@@ -24,7 +24,8 @@ public final class BodyShapeClientConfig {
                 .define("bodyPhysics", true);
         BUST_INTENSITY = builder
                 .comment("Bust bounce intensity: 0 is none, 1 is the default, 2 is strong."
-                        + " Ignored while MCA: Female Gender Physics (mcabp) is installed, which handles the bust itself.")
+                        + " Still applied when MCA: Female Gender Physics (mcabp) is installed (TOI jiggles its own bust mesh;"
+                        + " mcabp's bounce multiplier and master toggle are honored when readable).")
                 .translation("mcabodyshapes.config.bust_physics_intensity")
                 .defineInRange("bustPhysicsIntensity", 1.0d, 0.0d, 2.0d);
         SEAT_INTENSITY = builder

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.6.1 (2026-11-27): Bust physics works when MCA Female Gender Physics is installed
+- **Bust jiggle with mcabp.** 0.6.0 left the bust to MCA: Female Gender Physics when that mod (`mcabp`)
+  was loaded, but this mod also writes MCA's breast gene to 0 in that case (so the two bust meshes do
+  not stack). The result was no bust physics at all: mcabp had nothing to jiggle, and the TOI
+  `BustRenderer` stayed static. 0.6.1 always drives the jiggle on TOI's own bust mesh. The breast gene
+  stays at 0 when mcabp is loaded, so there is still no double bust. If mcabp's bounce multiplier and
+  master physics toggle can be read they are honored; a missing or failed reflection never disables
+  TOI physics.
+- **Motion sampling.** Vertical speed and turn are sampled from the last stepped pose, not only from
+  `entity.yo`, so interpolated MCA villagers, TOI companions and other players are not stuck at a
+  zero velocity. Bust and seat share one sample per tick. Config defaults (`bodyPhysics` true,
+  intensities 1.0) and client-config registration are unchanged; both renderers already called
+  `BodyPhysics`.
+- **Status.** A one-time client log line reports the gate, and `/mcabody physics` (client command)
+  prints the same plus the looked-at figure or yourself (eligible, bust and seat size).
+- Unit tests cover `JiggleSpring` walk bob, mcabp gating (including a failed-reflection default)
+  and motion sampling.
+
+
 ## 0.6.0 (2026-11-27): Bust and seat physics for body shapes
 - **Bust and seat jiggle (NeoForge, MCA Body Shapes).** The body-shape bust and seat meshes now have their own
   spring-damper physics, built for this mesh rather than borrowed from MCA: Female Gender Physics. It is client-side

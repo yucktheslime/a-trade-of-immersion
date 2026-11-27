@@ -1,4 +1,6 @@
 {
+  "commands.mcabodyshapes.physics": "Body physics: %s. Bust intensity %.2f (effective %.2f), seat intensity %.2f. mcabp: %s, mcabp physics: %s, bounce scale %.2f. TOI drives the bust mesh: %s. Breast gene write: %s. Physics is client-side: every player needs this TOI jar.",
+  "commands.mcabodyshapes.physics_target": "Target %s: eligible %s, bust %.2f, seat %.2f. Jump or walk to see the jiggle.",
   "commands.mcabodyshapes.get": "Body shape for %s: bust %.2f, hips %.2f, seat %.2f, waist %.2f, weight %.2f, muscle %.2f, shoulders %.2f, chest %.2f, gut %.2f, height %.2f, curves %.2f, thighs %.2f (pregnancy %.0f%%)",
   "commands.mcabodyshapes.set": "Set %s %s to %.2f",
   "commands.mcabodyshapes.preset": "Applied preset '%s' to %s",
